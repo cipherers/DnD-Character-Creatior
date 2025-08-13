@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Character Creator</title>
+    <!-- Use Tailwind CSS for modern, responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Optional custom styles to make it look a bit more themed */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+        .form-container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .form-input {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 0.75rem;
+            width: 100%;
+            transition: border-color 0.2s ease;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            color: #ffffff;
+            transition: background-color 0.2s ease;
+        }
+        .btn-primary {
+            background-color: #4f46e5;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca;
+        }
+        .btn-secondary {
+            background-color: #10b981;
+        }
+        .btn-secondary:hover {
+            background-color: #059669;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="form-container p-8 md:p-10 w-full max-w-2xl">
+        <h1 class="text-3xl font-bold text-center mb-6">Create Your Character</h1>
+                <ul class="mb-4">
+                
+                    <li class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative">{{ message }}</li>
+                
+                </ul>
+        <form action="{{ url_for('create_character') }}" method="post" class="space-y-6">
+            <!-- Basic Character Information -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" id="name" name="name" class="mt-1 form-input" required>
+                </div>
+                <div>
+                    <label for="age" class="block text-sm font-medium text-gray-700">Age</label>
+                    <input type="number" id="age" name="age" class="mt-1 form-input" required min="1">
+                </div>
+                <div>
+                    <label for="race" class="block text-sm font-medium text-gray-700">Race</label>
+                    <select id="race" name="race" class="mt-1 form-input" required>
+                        <option value="">-- Select a Race --</option>
+                        {% for race in races %}
+                            <option value="{{ race.id }}">{{ race.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="class" class="block text-sm font-medium text-gray-700">Class</label>
+                    <select id="class" name="class" class="mt-1 form-input" required>
+                        <option value="">-- Select a Class --</option>
+                        {% for class in classes %}
+                            <option value="{{ class.id }}">{{ class.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Ability Score Inputs -->
+            <hr class="my-6 border-gray-200">
+            <div>
+                <h2 class="text-xl font-bold mb-4">Ability Scores</h2>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="{{ ability | lower }}" class="block text-sm font-medium text-gray-700">Strength</label>
+                            <input type="number" id="{{ ability | lower }}" name="{{ ability | lower }}" class="mt-1 form-input" min="3" max="18" required>
+                        </div>
+                        <div>
+                            <label for="{{ ability | lower }}" class="block text-sm font-medium text-gray-700">Dexterity</label>
+                            <input type="number" id="{{ ability | lower }}" name="{{ ability | lower }}" class="mt-1 form-input" min="3" max="18" required>
+                        </div>
+                        <div>
+                            <label for="{{ ability | lower }}" class="block text-sm font-medium text-gray-700">Constitution</label>
+                            <input type="number" id="{{ ability | lower }}" name="{{ ability | lower }}" class="mt-1 form-input" min="3" max="18" required>
+                        </div>
+                        <div>
+                            <label for="{{ ability | lower }}" class="block text-sm font-medium text-gray-700">Intelligence</label>
+                            <input type="number" id="{{ ability | lower }}" name="{{ ability | lower }}" class="mt-1 form-input" min="3" max="18" required>
+                        </div>
+                        <div>
+                            <label for="{{ ability | lower }}" class="block text-sm font-medium text-gray-700">Wisdom</label>
+                            <input type="number" id="{{ ability | lower }}" name="{{ ability | lower }}" class="mt-1 form-input" min="3" max="18" required>
+                        </div>
+                        <div>
+                            <label for="{{ ability | lower }}" class="block text-sm font-medium text-gray-700">Charisma</label>
+                            <input type="number" id="{{ ability | lower }}" name="{{ ability | lower }}" class="mt-1 form-input" min="3" max="18" required>
+                        </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mt-8">
+                <button type="submit" name="submit_manual" class="btn btn-primary flex-1">
+                    Manually submit scores
+                </button>
+                <button type="submit" name="roll_scores" class="btn btn-secondary flex-1" formnovalidate>
+                    Roll Random Scores (4d6 drop lowest)
+                </button>
+            </div>
+            <p class="text-center text-sm text-gray-500 mt-4">
+                The scores you enter will be used if you click the first button. The second button will overwrite your entered scores with a random roll.
+            </p>
+        </form>
+    </div>
+</body>
+</html>
