@@ -70,7 +70,7 @@ def seed_database():
             intelligence=10,
             wisdom=11,
             charisma=13,
-            race=race_human,
+            race=human,
             character_class=class_fighter,
             background=background_acolyte
         )
