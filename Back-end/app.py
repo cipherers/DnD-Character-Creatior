@@ -7,6 +7,7 @@ import random
 from models import db, Character, Race, Class, Background, Skill, Equipment
 
 # --- Flask Application Setup ---
+# The template_folder is set to 'Front-end' to find index.html
 app = Flask(__name__, template_folder='../Front-end')
 # Configure the SQLite database. This will create a file called 'site.db'
 # in the same directory as this script.
@@ -70,13 +71,12 @@ def seed_database():
             intelligence=10,
             wisdom=11,
             charisma=13,
-            race=human.id,
-            character_class=class_fighter.id,
-            background=background_acolyte.id
+            race_id=human.id,
+            class_id=class_fighter.id,
+            background_id=background_acolyte.id
         )
 
         # 3. Add proficiencies and equipment using the relationships
-        # This will automatically populate the linking tables
         main_character.proficiencies.append(skill_athletics)
         main_character.inventory.append(equipment_sword)
         main_character.inventory.append(equipment_shield)
@@ -106,11 +106,12 @@ def create_character():
     # Check if a 'roll_scores' button was submitted
     if 'roll_scores' in request.form:
         # A new, blank character is created and then its scores are rolled
-        # Handle the case where character_age might be an empty string
-        age_val = int(character_age) if character_age else 1
+        # Corrected: Handle the case where character_age might be an empty string
+        age_val = int(character_age) if character_age else 1 # Default age to 1 if not provided
+        
         new_character = Character(
             name=character_name,
-            age=int(character_age),
+            age=age_val,
             alignment='Neutral',
             hp=10,
             strength=0, # These will be overwritten by the roll_ability_scores() method
@@ -119,9 +120,9 @@ def create_character():
             intelligence=0,
             wisdom=0,
             charisma=0,
-            race=Race.query.get(race_id),
-            character_class=Class.query.get(class_id),
-            background=None
+            race_id=race_id, # Corrected: Use race_id
+            class_id=class_id, # Corrected: Use class_id
+            background_id=None
         )
         new_character.roll_ability_scores()
         db.session.add(new_character)
@@ -130,9 +131,12 @@ def create_character():
 
     # Check if manual scores were submitted
     elif 'submit_manual' in request.form:
+        # Corrected: Handle the case where character_age might be an empty string
+        age_val = int(character_age) if character_age else 1
+        
         new_character = Character(
             name=character_name,
-            age=int(character_age),
+            age=age_val,
             alignment='Neutral',
             hp=10,
             strength=int(request.form.get('strength')),
@@ -141,9 +145,9 @@ def create_character():
             intelligence=int(request.form.get('intelligence')),
             wisdom=int(request.form.get('wisdom')),
             charisma=int(request.form.get('charisma')),
-            race=Race.query.get(race_id),
-            character_class=Class.query.get(class_id),
-            background=None
+            race_id=race_id, # Corrected: Use race_id
+            class_id=class_id, # Corrected: Use class_id
+            background_id=None
         )
         db.session.add(new_character)
         db.session.commit()
