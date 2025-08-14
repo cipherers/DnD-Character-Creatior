@@ -53,12 +53,16 @@
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
     <div class="form-container p-8 md:p-10 w-full max-w-2xl">
-        <h1 class="text-3xl font-bold text-center mb-6">Create Your Character</h1>
+        <h1 class="text-3xl font-bold text-center mb-6">Create Your DND Character</h1>
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
                 <ul class="mb-4">
-                
+                {% for message in messages %}
                     <li class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative">{{ message }}</li>
-                
+                {% endfor %}
                 </ul>
+                {% endif %}
+            {% endwith %}
         <form action="{{ url_for('create_character') }}" method="post" class="space-y-6">
             <!-- Basic Character Information -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
