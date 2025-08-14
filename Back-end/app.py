@@ -95,7 +95,7 @@ def index():
     classes = Class.query.all()
     return render_template('index.html', races=races, classes=classes)
 
-@app.route('/create-character', methods=['GET'])
+@app.route('/create-character', methods=['GET', 'POST'])
 def create_character():
     # Retrieve the Race and Class objects from the database based on the user's selection
     character_name = request.form.get('name')
