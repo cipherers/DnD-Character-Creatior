@@ -7,7 +7,7 @@ import random
 from models import db, Character, Race, Class, Background, Skill, Equipment
 
 # --- Flask Application Setup ---
-app = Flask(__name__)
+app = Flask(__name__, template_folder='Front-end')
 # Configure the SQLite database. This will create a file called 'site.db'
 # in the same directory as this script.
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
@@ -70,9 +70,9 @@ def seed_database():
             intelligence=10,
             wisdom=11,
             charisma=13,
-            race=human,
-            character_class=class_fighter,
-            background=background_acolyte
+            race=human.id,
+            character_class=class_fighter.id,
+            background=background_acolyte.id
         )
 
         # 3. Add proficiencies and equipment using the relationships
