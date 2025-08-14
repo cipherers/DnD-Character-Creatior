@@ -7,7 +7,7 @@ import random
 from models import db, Character, Race, Class, Background, Skill, Equipment
 
 # --- Flask Application Setup ---
-app = Flask(__name__, template_folder='Front-end')
+app = Flask(__name__, template_folder='../Front-end')
 # Configure the SQLite database. This will create a file called 'site.db'
 # in the same directory as this script.
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
@@ -106,6 +106,8 @@ def create_character():
     # Check if a 'roll_scores' button was submitted
     if 'roll_scores' in request.form:
         # A new, blank character is created and then its scores are rolled
+        # Handle the case where character_age might be an empty string
+        age_val = int(character_age) if character_age else 1
         new_character = Character(
             name=character_name,
             age=int(character_age),
