@@ -57,6 +57,10 @@ def seed_database():
             skill_athletics, skill_stealth,
             equipment_sword, equipment_shield
         ])
+        # Example debug: print the latest Race entry (remove or change as needed)
+        latest = db.session.query(Character).order_by(Character.id.desc()).first()
+        if latest:
+            print(latest.id)
         db.session.commit()
 
         # 2. Create a new Character and link it to the seeded data
@@ -101,11 +105,11 @@ def create_character():
     character_name = request.form.get('name')
     character_age = request.form.get('age')
     race_id = request.form.get('race')
-    class_id = request.form.get('class')
-    
+    character_class_id = request.form.get('class')  # Fix: match form field name
+
     # Fetch the full Race and Class objects from the database
     selected_race = Race.query.get(race_id)
-    selected_class = Class.query.get(class_id)
+    selected_class = Class.query.get(character_class_id)
     
     # Corrected: Handle the case where character_age might be an empty string
     age_val = int(character_age) if character_age else 1 # Default age to 1 if not provided

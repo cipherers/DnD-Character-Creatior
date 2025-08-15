@@ -32,6 +32,17 @@ class Character(db.Model):
     wisdom = db.Column(db.Integer, nullable=False)
     charisma = db.Column(db.Integer, nullable=False)
 
+    # Death save tracking
+    death_save_successes = db.Column(db.Integer, nullable=False, default=0)
+    death_save_failures = db.Column(db.Integer, nullable=False, default=0)
+
+    # Currency
+    copper_pieces = db.Column(db.Integer, nullable=False, default=0)
+    silver_pieces = db.Column(db.Integer, nullable=False, default=0)
+    gold_pieces = db.Column(db.Integer, nullable=False, default=0)
+    electrum_pieces = db.Column(db.Integer, nullable=False, default=0)
+    platinum_pieces = db.Column(db.Integer, nullable=False, default=0)
+
     # Foreign keys for relationships
     race_id = db.Column(db.Integer, db.ForeignKey('races.id'), nullable=False)
     character_class_id = db.Column(db.Integer, db.ForeignKey('classes.id'), nullable=False)
