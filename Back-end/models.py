@@ -3,6 +3,22 @@ import random
 
 db = SQLAlchemy()
 
+from werkzeug.security import generate_password_hash, check_password_hash
+
+# User model for authentication
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+    characters = db.relationship('Character', backref='user', lazy=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
 # Linking table for Character <-> Skill (Proficiencies)
 character_proficiencies = db.Table(
     'character_proficiencies',
@@ -44,6 +60,7 @@ class Character(db.Model):
     platinum_pieces = db.Column(db.Integer, nullable=False, default=0)
 
     # Foreign keys for relationships
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     race_id = db.Column(db.Integer, db.ForeignKey('races.id'), nullable=False)
     character_class_id = db.Column(db.Integer, db.ForeignKey('classes.id'), nullable=False)
     background_id = db.Column(db.Integer, db.ForeignKey('backgrounds.id'), nullable=True)
@@ -57,7 +74,7 @@ class Character(db.Model):
     proficiencies = db.relationship('Skill', secondary=character_proficiencies, backref=db.backref('characters_with_skill'), lazy=True)
     inventory = db.relationship('Equipment', secondary=character_equipment, backref=db.backref('characters_with_equipment'), lazy=True)
 
-    def __init__(self, name, age, alignment, hp, strength, dexterity, constitution, intelligence, wisdom, charisma, race, character_class, background=None):
+    def __init__(self, name, age, alignment, hp, strength, dexterity, constitution, intelligence, wisdom, charisma, race, character_class, background=None, user=None):
         self.name = name
         self.age = age
         self.alignment = alignment
@@ -71,6 +88,7 @@ class Character(db.Model):
         self.race = race # Assign the full Race object
         self.character_class = character_class # Assign the full Class object
         self.background = background
+        self.user = user
 
     def roll_ability_scores(self):
         """
