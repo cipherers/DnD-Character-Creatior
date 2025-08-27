@@ -58,25 +58,84 @@
             </div>
         </div>
         {% if characters and characters|length > 0 %}
-            <h2 class="text-xl font-semibold mb-4">Your Characters</h2>
-            <div class="overflow-y-auto max-h-96">
-                <ul class="divide-y divide-gray-200">
-                {% for char in characters %}
-                    <li class="flex items-center py-4">
-                        <div class="character-thumb mr-4 flex-shrink-0">
-                            <!-- Placeholder thumbnail, replace src with actual image if available -->
-                            <img src="https://api.dicebear.com/7.x/adventurer/svg?seed={{ char.name|urlencode }}" alt="Thumbnail" class="w-12 h-12">
+            <div class="md:flex md:space-x-6">
+                <!-- Left: character list -->
+                <div class="md:w-1/2">
+                    <h2 class="text-xl font-semibold mb-4">Your Characters</h2>
+                    <div class="overflow-y-auto max-h-96">
+                        <ul class="divide-y divide-gray-200">
+                        {% for char in characters %}
+                            <li class="py-4">
+                                <div id="char-{{ char.id }}" class="character-card flex items-center space-x-4 p-3 rounded-lg hover:shadow-lg transition-shadow relative" data-char-id="{{ char.id }}"
+                                     data-name="{{ char.name }}"
+                                     data-level="{{ char.level }}"
+                                     data-age="{{ char.age }}"
+                                     data-class="{{ char.character_class.name if char.character_class else '' }}"
+                                     data-race="{{ char.race.name if char.race else '' }}"
+                                     data-str="{{ char.strength }}"
+                                     data-dex="{{ char.dexterity }}"
+                                     data-con="{{ char.constitution }}"
+                                     data-int="{{ char.intelligence }}"
+                                     data-wis="{{ char.wisdom }}"
+                                     data-cha="{{ char.charisma }}">
+                                    <div class="character-thumb flex-shrink-0">
+                                        <img src="https://api.dicebear.com/7.x/adventurer/svg?seed={{ char.name|urlencode }}" alt="Thumbnail for {{ char.name }}" class="w-12 h-12 rounded">
+                                    </div>
+
+                                    <div class="flex-1">
+                                        <div class="flex items-start">
+                                            <div class="font-bold text-lg">{{ char.name }}</div>
+                                            <form method="post" action="{{ url_for('delete_character', char_id=char.id) }}" onsubmit="return confirm('Delete character {{ char.name }}?')" class="ml-auto">
+                                                <button type="submit" class="text-white bg-red-500 hover:bg-red-600 rounded px-2 py-1 text-sm">Delete</button>
+                                            </form>
+                                        </div>
+                                        <div class="text-sm text-gray-500">Level {{ char.level }} • Age {{ char.age }}</div>
+                                    </div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Right: persistent details panel -->
+                <aside id="char-details-panel" class="md:w-1/2 bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                    <div id="char-details-empty" class="text-center text-gray-500">
+                        Hover or tap a character to see details here.
+                    </div>
+                    <div id="char-details-content" class="hidden">
+                        <div class="flex items-center mb-3">
+                            <div class="character-thumb mr-3">
+                                <img id="detail-thumb" src="" alt="" class="w-16 h-16 rounded">
+                            </div>
+                            <div>
+                                <div id="detail-name" class="font-bold text-2xl"></div>
+                                <div id="detail-sub" class="text-sm text-gray-500"></div>
+                            </div>
                         </div>
-                        <div class="flex-1 relative group">
-                            <form method="post" action="{{ url_for('delete_character', char_id=char.id) }}" onsubmit="return confirm('Delete character {{ char.name }}?')" class="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button type="submit" class="text-white bg-red-500 hover:bg-red-600 rounded px-2 py-1 text-sm">Delete</button>
-                            </form>
-                            <div class="font-bold text-lg">{{ char.name }}</div>
-                            <div class="text-sm text-gray-500">Level {{ char.level }}</div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <div class="font-medium">Class</div>
+                                <div id="detail-class" class="text-sm text-gray-700">-</div>
+                            </div>
+                            <div>
+                                <div class="font-medium">Race</div>
+                                <div id="detail-race" class="text-sm text-gray-700">-</div>
+                            </div>
                         </div>
-                    </li>
-                {% endfor %}
-                </ul>
+                        <div class="mt-4">
+                            <div class="font-medium mb-1">Ability Scores</div>
+                            <div class="grid grid-cols-3 gap-2 text-sm text-gray-700">
+                                <div>STR: <span id="detail-str">-</span></div>
+                                <div>DEX: <span id="detail-dex">-</span></div>
+                                <div>CON: <span id="detail-con">-</span></div>
+                                <div>INT: <span id="detail-int">-</span></div>
+                                <div>WIS: <span id="detail-wis">-</span></div>
+                                <div>CHA: <span id="detail-cha">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
             </div>
             {% if total > per_page %}
             <div class="flex justify-center mt-4 space-x-2">
@@ -93,3 +152,79 @@
     </div>
 </body>
 </html>
+
+<style>
+/* Left-right layout adjustments */
+.md\:flex { display: flex; }
+.md\:space-x-6 > * + * { margin-left: 1.5rem; }
+@media (min-width: 768px) {
+    .md\:w-1\/2 { width: 50%; }
+}
+.character-card { cursor: pointer; }
+.character-card:hover { background-color: #fbfbff; }
+.character-thumb img { display: block; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const panel = document.getElementById('char-details-panel');
+    const empty = document.getElementById('char-details-empty');
+    const content = document.getElementById('char-details-content');
+
+    function showDetailsFromCard(card) {
+        const name = card.dataset.name || '';
+        const level = card.dataset.level || '';
+        const age = card.dataset.age || '';
+        const cls = card.dataset.class || '';
+        const race = card.dataset.race || '';
+        const str = card.dataset.str || '-';
+        const dex = card.dataset.dex || '-';
+        const con = card.dataset.con || '-';
+        const intl = card.dataset.int || '-';
+        const wis = card.dataset.wis || '-';
+        const cha = card.dataset.cha || '-';
+
+        // Populate panel
+        document.getElementById('detail-name').textContent = name;
+        document.getElementById('detail-sub').textContent = `Level ${level} • Age ${age}`;
+        document.getElementById('detail-class').textContent = cls || 'N/A';
+        document.getElementById('detail-race').textContent = race || 'N/A';
+        document.getElementById('detail-str').textContent = str;
+        document.getElementById('detail-dex').textContent = dex;
+        document.getElementById('detail-con').textContent = con;
+        document.getElementById('detail-int').textContent = intl;
+        document.getElementById('detail-wis').textContent = wis;
+        document.getElementById('detail-cha').textContent = cha;
+
+        // Set thumbnail (use dicebear seed)
+        const thumb = document.getElementById('detail-thumb');
+        thumb.src = `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name)}`;
+        thumb.alt = `Thumbnail for ${name}`;
+
+        empty.classList.add('hidden');
+        content.classList.remove('hidden');
+    }
+
+    // Hover and click handlers
+    document.querySelectorAll('.character-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            showDetailsFromCard(card);
+        });
+        // Touch/click selects the card on mobile
+        card.addEventListener('click', function(e) {
+            showDetailsFromCard(card);
+            e.stopPropagation();
+        });
+    });
+
+    // Clicking outside clears selection on small screens
+    document.addEventListener('click', function() {
+        if (window.innerWidth < 768) {
+            document.getElementById('detail-name').textContent = '';
+            document.getElementById('detail-sub').textContent = '';
+            empty.classList.remove('hidden');
+            content.classList.add('hidden');
+        }
+    });
+});
+</script>
