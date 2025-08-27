@@ -99,7 +99,8 @@ def seed_database():
             race=human, # Pass the Race object
             character_class=class_fighter, # Pass the Class object
             background=background_acolyte,
-            user=seed_user
+            user=seed_user,
+            level = 1
         )
 
         # 3. Add proficiencies and equipment using the relationships
@@ -182,7 +183,7 @@ def create_character():
     character_age = request.form.get('age')
     race_id = request.form.get('race')
     character_class_id = request.form.get('class')  # Fix: match form field name
-
+    character_level = request.form.get('level', 1)
     # Fetch the full Race and Class objects from the database
     selected_race = Race.query.get(race_id)
     selected_class = Class.query.get(character_class_id)
@@ -219,7 +220,8 @@ def create_character():
             race=selected_race, # Pass the Race object
             character_class=selected_class, # Pass the Class object
             background=None,
-            user=user
+            user=user,
+            level = character_level
         )
         new_character.roll_ability_scores()
         db.session.add(new_character)
@@ -242,7 +244,8 @@ def create_character():
             race=selected_race, # Pass the Race object
             character_class=selected_class, # Pass the Class object
             background=None,
-            user=user
+            user=user,
+            level=character_level
         )
         db.session.add(new_character)
         db.session.commit()
