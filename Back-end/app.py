@@ -12,7 +12,7 @@ app = Flask(__name__, template_folder='../Front-end')
 # Configure the SQLite database. This will create a file called 'site.db'
 # in the same directory as this script.
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'a_very_secret_key' # Needed for flash messages and sessions
 
 # Initialize the SQLAlchemy object with the Flask app
@@ -75,6 +75,15 @@ def seed_database():
             print(latest.id)
         db.session.commit()
 
+        # Ensure at least one user exists for foreign key user_id
+        from models import User as UserModel
+        seed_user = User.query.first()
+        if not seed_user:
+            seed_user = User(username='seed_user')
+            seed_user.set_password('password')
+            db.session.add(seed_user)
+            db.session.commit()
+
         # 2. Create a new Character and link it to the seeded data
         main_character = Character(
             name='Arthur',
@@ -89,7 +98,8 @@ def seed_database():
             charisma=13,
             race=human, # Pass the Race object
             character_class=class_fighter, # Pass the Class object
-            background=background_acolyte
+            background=background_acolyte,
+            user=seed_user
         )
 
         # 3. Add proficiencies and equipment using the relationships
