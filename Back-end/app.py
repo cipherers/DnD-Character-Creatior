@@ -198,6 +198,20 @@ def create_character():
     # Corrected: Handle the case where character_age might be an empty string
     age_val = int(character_age) if character_age else 1 # Default age to 1 if not provided
 
+    # Normalize level early
+    try:
+        lvl = int(character_level)
+    except (TypeError, ValueError):
+        lvl = 1
+
+    # Ensure race/class/background are present to avoid runtime errors in model methods
+    if not selected_race:
+        flash('Race selection is required.')
+        return redirect(url_for('create_character'))
+    if not selected_class:
+        flash('Class selection is required.')
+        return redirect(url_for('create_character'))
+
     # Check if a 'roll_scores' button was submitted
     user = User.query.get(session['user_id'])
     if 'roll_scores' in request.form:
@@ -215,15 +229,12 @@ def create_character():
             flash(f"The following fields are required for rolling random scores: {', '.join(missing_fields)}.")
             return redirect(url_for('create_character'))
         # A new, blank character is created and then its scores are rolled
-        try:
-            lvl = int(character_level)
-        except (TypeError, ValueError):
-            lvl = 1
+        hp_guess = selected_class.hit_die if selected_class and selected_class.hit_die else 10
         new_character = Character(
             name=character_name,
             age=age_val,
             alignment='Neutral',
-            hp=10,
+            hp=hp_guess,
             strength=0, 
             dexterity=0,
             constitution=0,
@@ -258,16 +269,11 @@ def create_character():
             flash('Background is required when creating a character.')
             return redirect(url_for('create_character'))
 
-        try:
-            lvl = int(character_level)
-        except (TypeError, ValueError):
-            lvl = 1
-
         new_character = Character(
             name=character_name,
             age=age_val,
             alignment='Neutral',
-            hp=10,
+            hp=selected_class.hit_die if selected_class and selected_class.hit_die else 10,
             strength=strength_val,
             dexterity=dexterity_val,
             constitution=constitution_val,
