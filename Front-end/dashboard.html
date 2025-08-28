@@ -72,6 +72,7 @@
                                      data-age="{{ char.age }}"
                                      data-class="{{ char.character_class.name if char.character_class else '' }}"
                                      data-race="{{ char.race.name if char.race else '' }}"
+                                     data-background="{{ char.background.name if char.background else '' }}"
                                      data-str="{{ char.strength }}"
                                      data-dex="{{ char.dexterity }}"
                                      data-con="{{ char.constitution }}"
@@ -122,6 +123,10 @@
                                 <div class="font-medium">Race</div>
                                 <div id="detail-race" class="text-sm text-gray-700">-</div>
                             </div>
+                        </div>
+                        <div class="mt-2">
+                            <div class="font-medium">Background</div>
+                            <div id="detail-background" class="text-sm text-gray-700">-</div>
                         </div>
                         <div class="mt-4">
                             <div class="font-medium mb-1">Ability Scores</div>
@@ -177,18 +182,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const age = card.dataset.age || '';
         const cls = card.dataset.class || '';
         const race = card.dataset.race || '';
-        const str = card.dataset.str || '-';
+    const str = card.dataset.str || '-';
         const dex = card.dataset.dex || '-';
         const con = card.dataset.con || '-';
         const intl = card.dataset.int || '-';
         const wis = card.dataset.wis || '-';
         const cha = card.dataset.cha || '-';
+    const background = card.dataset.background || '';
 
         // Populate panel
         document.getElementById('detail-name').textContent = name;
         document.getElementById('detail-sub').textContent = `Level ${level} • Age ${age}`;
         document.getElementById('detail-class').textContent = cls || 'N/A';
         document.getElementById('detail-race').textContent = race || 'N/A';
+    document.getElementById('detail-background').textContent = background || 'N/A';
         document.getElementById('detail-str').textContent = str;
         document.getElementById('detail-dex').textContent = dex;
         document.getElementById('detail-con').textContent = con;
