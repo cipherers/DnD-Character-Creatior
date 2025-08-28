@@ -96,6 +96,15 @@
                         {% endfor %}
                     </select>
                 </div>
+                <div>
+                    <label for="background" class="block text-sm font-medium text-gray-700">Background</label>
+                    <select id="background" name="background" class="mt-1 form-input">
+                        <option value="">-- Select a Background (optional) --</option>
+                        {% for background in backgrounds %}
+                            <option value="{{ background.id }}">{{ background.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
 
             <!-- Ability Score Inputs -->

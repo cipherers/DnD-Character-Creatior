@@ -160,7 +160,9 @@ def dashboard():
         # No characters: show character creator UI in dashboard layout
         races = Race.query.all()
         classes = Class.query.all()
-        return render_template('dashboard.html', characters=[], races=races, classes=classes)
+        backgrounds = Background.query.all()
+        return render_template('dashboard.html', characters=[], races=races, classes=classes, backgrounds=backgrounds)
+
     # Characters exist: show dashboard with character list
     # For performance, show up to 10 at a time (pagination can be added later)
     page = int(request.args.get('page', 1))
@@ -177,7 +179,10 @@ def create_character():
     if request.method == 'GET':
         races = Race.query.all()
         classes = Class.query.all()
-        return render_template('index.html', races=races, classes=classes)
+        backgrounds = Background.query.all()
+        return render_template('index.html', races=races, classes=classes, backgrounds=backgrounds)
+
+    # POST handling
     # Retrieve the Race and Class IDs from the form
     character_name = request.form.get('name')
     character_age = request.form.get('age')
@@ -185,8 +190,10 @@ def create_character():
     character_class_id = request.form.get('class')  # Fix: match form field name
     character_level = request.form.get('level', 1)
     # Fetch the full Race and Class objects from the database
-    selected_race = Race.query.get(race_id)
-    selected_class = Class.query.get(character_class_id)
+    selected_race = Race.query.get(race_id) if race_id else None
+    selected_class = Class.query.get(character_class_id) if character_class_id else None
+    background_id = request.form.get('background')
+    selected_background = Background.query.get(background_id) if background_id else None
 
     # Corrected: Handle the case where character_age might be an empty string
     age_val = int(character_age) if character_age else 1 # Default age to 1 if not provided
@@ -204,8 +211,12 @@ def create_character():
             missing_fields.append('Class')
         if missing_fields:
             flash(f"The following fields are required for rolling random scores: {', '.join(missing_fields)}.")
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('create_character'))
         # A new, blank character is created and then its scores are rolled
+        try:
+            lvl = int(character_level)
+        except (TypeError, ValueError):
+            lvl = 1
         new_character = Character(
             name=character_name,
             age=age_val,
@@ -219,9 +230,9 @@ def create_character():
             charisma=0,
             race=selected_race, # Pass the Race object
             character_class=selected_class, # Pass the Class object
-            background=None,
+            background=selected_background,
             user=user,
-            level = character_level
+            level = lvl
         )
         new_character.roll_ability_scores()
         db.session.add(new_character)
@@ -230,22 +241,38 @@ def create_character():
 
     # Check if manual scores were submitted
     elif 'submit_manual' in request.form:
+        try:
+            strength_val = int(request.form.get('strength'))
+            dexterity_val = int(request.form.get('dexterity'))
+            constitution_val = int(request.form.get('constitution'))
+            intelligence_val = int(request.form.get('intelligence'))
+            wisdom_val = int(request.form.get('wisdom'))
+            charisma_val = int(request.form.get('charisma'))
+        except (TypeError, ValueError):
+            flash('Please provide valid numeric ability scores.')
+            return redirect(url_for('create_character'))
+
+        try:
+            lvl = int(character_level)
+        except (TypeError, ValueError):
+            lvl = 1
+
         new_character = Character(
             name=character_name,
             age=age_val,
             alignment='Neutral',
             hp=10,
-            strength=int(request.form.get('strength')),
-            dexterity=int(request.form.get('dexterity')),
-            constitution=int(request.form.get('constitution')),
-            intelligence=int(request.form.get('intelligence')),
-            wisdom=int(request.form.get('wisdom')),
-            charisma=int(request.form.get('charisma')),
+            strength=strength_val,
+            dexterity=dexterity_val,
+            constitution=constitution_val,
+            intelligence=intelligence_val,
+            wisdom=wisdom_val,
+            charisma=charisma_val,
             race=selected_race, # Pass the Race object
             character_class=selected_class, # Pass the Class object
-            background=None,
+            background=selected_background,
             user=user,
-            level=character_level
+            level=lvl
         )
         db.session.add(new_character)
         db.session.commit()
