@@ -209,6 +209,8 @@ def create_character():
             missing_fields.append('Age')
         if not character_class_id or not character_class_id.strip():
             missing_fields.append('Class')
+        if not background_id or not background_id.strip():
+            missing_fields.append('Background')
         if missing_fields:
             flash(f"The following fields are required for rolling random scores: {', '.join(missing_fields)}.")
             return redirect(url_for('create_character'))
@@ -250,6 +252,10 @@ def create_character():
             charisma_val = int(request.form.get('charisma'))
         except (TypeError, ValueError):
             flash('Please provide valid numeric ability scores.')
+            return redirect(url_for('create_character'))
+
+        if not background_id or not background_id.strip():
+            flash('Background is required when creating a character.')
             return redirect(url_for('create_character'))
 
         try:

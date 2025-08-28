@@ -98,8 +98,8 @@
                 </div>
                 <div>
                     <label for="background" class="block text-sm font-medium text-gray-700">Background</label>
-                    <select id="background" name="background" class="mt-1 form-input">
-                        <option value="">-- Select a Background (optional) --</option>
+                    <select id="background" name="background" class="mt-1 form-input" required>
+                        <option value="" disabled selected>-- Select a Background --</option>
                         {% for background in backgrounds %}
                             <option value="{{ background.id }}">{{ background.name }}</option>
                         {% endfor %}
