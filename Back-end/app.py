@@ -18,6 +18,28 @@ app.config['SECRET_KEY'] = 'a_very_secret_key' # Needed for flash messages and s
 # Initialize the SQLAlchemy object with the Flask app
 db.init_app(app)
 
+
+def get_class_skill_map():
+    """Return a dict mapping Class.id -> list of allowed Skill.ids.
+
+    Uses a small rule set: Fighter -> Athletics, Stealth; Wizard -> Stealth; other classes -> all skills.
+    """
+    # Define rules by class name (case-insensitive)
+    rules = {
+        'fighter': ['Athletics', 'Stealth'],
+        'wizard': ['Stealth'],
+    }
+    skills = {s.name: s.id for s in Skill.query.all()}
+    mapping = {}
+    for cls in Class.query.all():
+        allowed_names = rules.get(cls.name.lower(), None)
+        if allowed_names is None:
+            # allow all skills when no rule is defined
+            mapping[cls.id] = [s.id for s in Skill.query.all()]
+        else:
+            mapping[cls.id] = [skills[n] for n in allowed_names if n in skills]
+    return mapping
+
 # --- Database Seeding Function ---
 def seed_database():
     """
@@ -160,8 +182,10 @@ def dashboard():
         # No characters: show character creator UI in dashboard layout
         races = Race.query.all()
         classes = Class.query.all()
-        backgrounds = Background.query.all()
-        return render_template('dashboard.html', characters=[], races=races, classes=classes, backgrounds=backgrounds)
+    backgrounds = Background.query.all()
+    skills = Skill.query.all()
+    class_skill_map = get_class_skill_map()
+    return render_template('dashboard.html', characters=[], races=races, classes=classes, backgrounds=backgrounds, skills=skills, class_skill_map=class_skill_map)
 
     # Characters exist: show dashboard with character list
     # For performance, show up to 10 at a time (pagination can be added later)
@@ -179,8 +203,10 @@ def create_character():
     if request.method == 'GET':
         races = Race.query.all()
         classes = Class.query.all()
-        backgrounds = Background.query.all()
-        return render_template('index.html', races=races, classes=classes, backgrounds=backgrounds)
+    backgrounds = Background.query.all()
+    skills = Skill.query.all()
+    class_skill_map = get_class_skill_map()
+    return render_template('index.html', races=races, classes=classes, backgrounds=backgrounds, skills=skills, class_skill_map=class_skill_map)
 
     # POST handling
     # Retrieve the Race and Class IDs from the form
@@ -248,6 +274,13 @@ def create_character():
             level = lvl
         )
         new_character.roll_ability_scores()
+        # Handle selected skills from form (checkboxes named 'skill_<id>')
+        for s in Skill.query.all():
+            if request.form.get(f'skill_{s.id}'):
+                # only add if allowed for class
+                allowed = get_class_skill_map().get(selected_class.id, [])
+                if s.id in allowed:
+                    new_character.proficiencies.append(s)
         db.session.add(new_character)
         db.session.commit()
         flash(f"Character '{new_character.name}' created with rolled ability scores!")
@@ -286,6 +319,12 @@ def create_character():
             user=user,
             level=lvl
         )
+        # attach selected skills
+        for s in Skill.query.all():
+            if request.form.get(f'skill_{s.id}'):
+                allowed = get_class_skill_map().get(selected_class.id, [])
+                if s.id in allowed:
+                    new_character.proficiencies.append(s)
         db.session.add(new_character)
         db.session.commit()
         flash(f"Character '{new_character.name}' created with manual ability scores!")
