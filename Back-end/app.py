@@ -175,20 +175,8 @@ def logout():
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
+        flash('Please log in to access the dashboard.')
         return redirect(url_for('login'))
-<<<<<<< HEAD
-=======
-    user = User.query.get(session['user_id'])
-    characters = user.characters
-    if not characters:
-        # No characters: show character creator UI in dashboard layout
-        races = Race.query.all()
-        classes = Class.query.all()
-    backgrounds = Background.query.all()
-    skills = Skill.query.all()
-    class_skill_map = get_class_skill_map()
-    return render_template('dashboard.html', characters=[], races=races, classes=classes, backgrounds=backgrounds, skills=skills, class_skill_map=class_skill_map)
->>>>>>> 617b12fcc839d48064eaaef07a8e95888a2309ab
 
     user = User.query.get(session['user_id'])
     characters = Character.query.filter_by(user_id=user.id).all()
@@ -201,175 +189,88 @@ def dashboard():
 def create_character():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    # If GET, render the character creation form so users can create additional characters
+
     if request.method == 'GET':
         races = Race.query.all()
         classes = Class.query.all()
-    backgrounds = Background.query.all()
-    skills = Skill.query.all()
-    class_skill_map = get_class_skill_map()
-    return render_template('index.html', races=races, classes=classes, backgrounds=backgrounds, skills=skills, class_skill_map=class_skill_map)
+        backgrounds = Background.query.all()
+        skills = Skill.query.all()
+        class_skill_map = get_class_skill_map()
+        return render_template('index.html', races=races, classes=classes, backgrounds=backgrounds, skills=skills, class_skill_map=class_skill_map)
 
     # POST handling
-    # Retrieve the Race and Class IDs from the form
+    user = User.query.get(session['user_id'])
     character_name = request.form.get('name')
     character_age = request.form.get('age')
     race_id = request.form.get('race')
-    character_class_id = request.form.get('class')  # Fix: match form field name
+    character_class_id = request.form.get('class')
     character_level = request.form.get('level', 1)
-    alignment = request.form.get('alignment')
-    hp = request.form.get('hp')
+    alignment = request.form.get('alignment', 'Neutral')
+    hp = request.form.get('hp', 10)
 
-    # Fetch the full Race and Class objects from the database
-    selected_race = Race.query.get(race_id) if race_id else None
-    selected_class = Class.query.get(character_class_id) if character_class_id else None
+    selected_race = Race.query.get(race_id)
+    selected_class = Class.query.get(character_class_id)
     background_id = request.form.get('background')
-    selected_background = Background.query.get(background_id) if background_id else None
+    selected_background = Background.query.get(background_id)
 
-    # Corrected: Handle the case where character_age might be an empty string
-    age_val = int(character_age) if character_age else 1 # Default age to 1 if not provided
+    if not selected_race or not selected_class:
+        flash('Race and Class are required.')
+        return redirect(url_for('create_character'))
 
-    # Normalize level early
     try:
         lvl = int(character_level)
-    except (TypeError, ValueError):
-        lvl = 1
-
-    # Ensure race/class/background are present to avoid runtime errors in model methods
-    if not selected_race:
-        flash('Race selection is required.')
+        age_val = int(character_age) if character_age else 1
+    except ValueError:
+        flash('Invalid level or age.')
         return redirect(url_for('create_character'))
-    if not selected_class:
-        flash('Class selection is required.')
-        return redirect(url_for('create_character'))
-
-    # Check if a 'roll_scores' button was submitted
-    user = User.query.get(session['user_id'])
-    if 'roll_scores' in request.form:
-        # Validate required fields for rolling random scores
-        missing_fields = []
-        if not character_name or not character_name.strip():
-            missing_fields.append('Name')
-        if not character_age or not character_age.strip():
-            missing_fields.append('Age')
-        if not character_class_id or not character_class_id.strip():
-            missing_fields.append('Class')
-        if not background_id or not background_id.strip():
-            missing_fields.append('Background')
-        if missing_fields:
-            flash(f"The following fields are required for rolling random scores: {', '.join(missing_fields)}.")
-            return redirect(url_for('create_character'))
-        # A new, blank character is created and then its scores are rolled
-        hp_guess = selected_class.hit_die if selected_class and selected_class.hit_die else 10
-        new_character = Character(
-            name=character_name,
-            age=age_val,
-            alignment='Neutral',
-            hp=hp_guess,
-            strength=0, 
-            dexterity=0,
-            constitution=0,
-            intelligence=0,
-            wisdom=0,
-            charisma=0,
-            race=selected_race, # Pass the Race object
-            character_class=selected_class, # Pass the Class object
-            background=selected_background,
-            user=user,
-            level = lvl
-        )
-        new_character.roll_ability_scores()
-        # Handle selected skills from form (checkboxes named 'skill_<id>')
-        for s in Skill.query.all():
-            if request.form.get(f'skill_{s.id}'):
-                # only add if allowed for class
-                allowed = get_class_skill_map().get(selected_class.id, [])
-                if s.id in allowed:
-                    new_character.proficiencies.append(s)
-        db.session.add(new_character)
-        db.session.commit()
-        flash(f"Character '{new_character.name}' created with rolled ability scores!")
-
-    # Check if manual scores were submitted
-    elif 'submit_manual' in request.form:
-        try:
-            strength_val = int(request.form.get('strength'))
-            dexterity_val = int(request.form.get('dexterity'))
-            constitution_val = int(request.form.get('constitution'))
-            intelligence_val = int(request.form.get('intelligence'))
-            wisdom_val = int(request.form.get('wisdom'))
-            charisma_val = int(request.form.get('charisma'))
-        except (TypeError, ValueError):
-            flash('Please provide valid numeric ability scores.')
-            return redirect(url_for('create_character'))
-
-        if not background_id or not background_id.strip():
-            flash('Background is required when creating a character.')
-            return redirect(url_for('create_character'))
-
-        new_character = Character(
-            name=character_name,
-            age=age_val,
-            alignment='Neutral',
-            hp=selected_class.hit_die if selected_class and selected_class.hit_die else 10,
-            strength=strength_val,
-            dexterity=dexterity_val,
-            constitution=constitution_val,
-            intelligence=intelligence_val,
-            wisdom=wisdom_val,
-            charisma=charisma_val,
-            race=selected_race, # Pass the Race object
-            character_class=selected_class, # Pass the Class object
-            background=selected_background,
-            user=user,
-            level=lvl
-        )
-        # attach selected skills
-        for s in Skill.query.all():
-            if request.form.get(f'skill_{s.id}'):
-                allowed = get_class_skill_map().get(selected_class.id, [])
-                if s.id in allowed:
-                    new_character.proficiencies.append(s)
-        db.session.add(new_character)
-        db.session.commit()
-        flash(f"Character '{new_character.name}' created with manual ability scores!")
-
-    # Handle selected skills
-    selected_skill_ids = request.form.getlist('skills')
-    selected_skills = Skill.query.filter(Skill.id.in_(selected_skill_ids)).all()
-
-    # Handle selected equipment
-    selected_equipment_ids = request.form.getlist('equipment')
-    selected_equipment = Equipment.query.filter(Equipment.id.in_(selected_equipment_ids)).all()
 
     new_character = Character(
         name=character_name,
         age=age_val,
-        alignment='Neutral',
-        hp=selected_class.hit_die if selected_class and selected_class.hit_die else 10,
-        strength=strength_val,
-        dexterity=dexterity_val,
-        constitution=constitution_val,
-        intelligence=intelligence_val,
-        wisdom=wisdom_val,
-        charisma=charisma_val,
-        race=selected_race, # Pass the Race object
-        character_class=selected_class, # Pass the Class object
+        alignment=alignment,
+        hp=hp,
+        strength=0,
+        dexterity=0,
+        constitution=0,
+        intelligence=0,
+        wisdom=0,
+        charisma=0,
+        race=selected_race,
+        character_class=selected_class,
         background=selected_background,
         user=user,
         level=lvl
     )
 
-    # Add skills and equipment to the character
-    new_character.proficiencies.extend(selected_skills)
+    if 'roll_scores' in request.form:
+        new_character.roll_ability_scores()
+    else:
+        try:
+            new_character.strength = int(request.form.get('strength', 0))
+            new_character.dexterity = int(request.form.get('dexterity', 0))
+            new_character.constitution = int(request.form.get('constitution', 0))
+            new_character.intelligence = int(request.form.get('intelligence', 0))
+            new_character.wisdom = int(request.form.get('wisdom', 0))
+            new_character.charisma = int(request.form.get('charisma', 0))
+        except ValueError:
+            flash('Invalid ability scores.')
+            return redirect(url_for('create_character'))
+
+    selected_skill_ids = request.form.getlist('skills')
+    selected_skills = Skill.query.filter(Skill.id.in_(selected_skill_ids)).all()
+    for skill in selected_skills:
+        if skill.id in get_class_skill_map().get(selected_class.id, []):
+            new_character.proficiencies.append(skill)
+
+    selected_equipment_ids = request.form.getlist('equipment')
+    selected_equipment = Equipment.query.filter(Equipment.id.in_(selected_equipment_ids)).all()
     new_character.inventory.extend(selected_equipment)
 
     db.session.add(new_character)
     db.session.commit()
-    flash(f"Character '{new_character.name}' created with selected skills and equipment!")
 
+    flash(f"Character '{new_character.name}' created successfully!")
     return redirect(url_for('dashboard'))
-
 
 @app.route('/delete-character/<int:char_id>', methods=['POST'])
 def delete_character(char_id):
