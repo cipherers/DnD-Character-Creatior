@@ -111,6 +111,17 @@
             <hr class="my-6 border-gray-200">
             <div>
                 <h2 class="text-xl font-bold mb-4">Ability Scores</h2>
+                <div class="mb-4">
+                    <h3 class="font-medium mb-2">Proficiencies (Skills)</h3>
+                    <div id="skills-list" class="grid grid-cols-2 gap-2">
+                        {% for skill in skills %}
+                            <label class="inline-flex items-center space-x-2 text-sm">
+                                <input type="checkbox" id="skill_{{ skill.id }}" name="skill_{{ skill.id }}" class="form-input skill-checkbox" />
+                                <span>{{ skill.name }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <div>
                             <label for="strength" class="block text-sm font-medium text-gray-700">Strength</label>
@@ -256,4 +267,49 @@
     });
     </script>
 </body>
+<!-- class_skill_map JSON kept in a non-JS script tag to avoid template interpolation inside JS -->
+<script type="application/json" id="class-skill-map-data">{{ (class_skill_map if class_skill_map is defined else {}) | tojson | safe }}</script>
+<script type="application/javascript">
+// Parse class_skill_map from the JSON script tag. Falls back to empty object.
+let CLASS_SKILL_MAP = {};
+try {
+    const dataEl = document.getElementById('class-skill-map-data');
+    if (dataEl && dataEl.textContent) {
+        CLASS_SKILL_MAP = JSON.parse(dataEl.textContent);
+    }
+} catch (e) {
+    CLASS_SKILL_MAP = {};
+}
+
+// Ensure keys are strings to match select.value
+const CLASS_SKILL_MAP_STR = {};
+Object.keys(CLASS_SKILL_MAP || {}).forEach(function(k) {
+    CLASS_SKILL_MAP_STR[String(k)] = CLASS_SKILL_MAP[k];
+});
+
+function updateSkillCheckboxes() {
+    const classSelect = document.getElementById('class');
+    const selected = classSelect ? classSelect.value : '';
+    const allowed = CLASS_SKILL_MAP_STR[selected] || [];
+    document.querySelectorAll('.skill-checkbox').forEach(function(cb) {
+        const id = parseInt(cb.id.replace('skill_', ''), 10);
+        if (allowed.includes(id)) {
+            cb.disabled = false;
+            cb.parentElement.classList.remove('opacity-50');
+        } else {
+            cb.disabled = true;
+            cb.checked = false;
+            cb.parentElement.classList.add('opacity-50');
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const classSelect = document.getElementById('class');
+    if (classSelect) {
+        classSelect.addEventListener('change', updateSkillCheckboxes);
+        updateSkillCheckboxes();
+    }
+});
+</script>
 </html>
