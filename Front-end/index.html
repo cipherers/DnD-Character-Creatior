@@ -139,6 +139,23 @@
                 </div>
             </div>
 
+            <!-- Skills and Equipment Section -->
+            <hr class="my-6 border-gray-200">
+            <div>
+                <h2 class="text-xl font-bold mb-4">Skills</h2>
+                <div id="skills-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Skills will be dynamically populated here -->
+                </div>
+            </div>
+
+            <hr class="my-6 border-gray-200">
+            <div>
+                <h2 class="text-xl font-bold mb-4">Equipment</h2>
+                <div id="equipment-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Equipment will be dynamically populated here -->
+                </div>
+            </div>
+
             <!-- Action Buttons -->
             <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mt-8">
                 <button type="submit" name="submit_manual" class="btn btn-primary flex-1">
@@ -153,5 +170,90 @@
             </p>
         </form>
     </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const classSelect = document.getElementById('class');
+        const skillsContainer = document.getElementById('skills-container');
+        const equipmentContainer = document.getElementById('equipment-container');
+
+        // Fetch skills and equipment for the selected class
+        classSelect.addEventListener('change', async function () {
+            const classId = this.value;
+            if (!classId) {
+                skillsContainer.innerHTML = '<p class="text-gray-500">No skills available.</p>';
+                equipmentContainer.innerHTML = '<p class="text-gray-500">No equipment available.</p>';
+                return;
+            }
+
+            try {
+                // Fetch skills and equipment from the server
+                const response = await fetch(`/get-class-details/${classId}`);
+                const data = await response.json();
+
+                // Populate skills
+                skillsContainer.innerHTML = '';
+                if (data.skills.length > 0) {
+                    data.skills.forEach(skill => {
+                        const skillOption = document.createElement('div');
+                        skillOption.innerHTML = `
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="skills" value="${skill.id}" class="form-checkbox">
+                                <span class="ml-2">${skill.name}</span>
+                            </label>
+                        `;
+                        skillsContainer.appendChild(skillOption);
+                    });
+                } else {
+                    skillsContainer.innerHTML = '<p class="text-gray-500">No skills available for this class.</p>';
+                }
+
+                // Populate equipment
+                equipmentContainer.innerHTML = '';
+                if (data.equipment.length > 0) {
+                    data.equipment.forEach(equip => {
+                        const equipOption = document.createElement('div');
+                        equipOption.innerHTML = `
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="equipment" value="${equip.id}" class="form-checkbox">
+                                <span class="ml-2">${equip.name}</span>
+                            </label>
+                        `;
+                        equipmentContainer.appendChild(equipOption);
+                    });
+                } else {
+                    equipmentContainer.innerHTML = '<p class="text-gray-500">No equipment available for this class.</p>';
+                }
+            } catch (error) {
+                console.error('Error fetching class details:', error);
+                skillsContainer.innerHTML = '<p class="text-red-500">Failed to load skills.</p>';
+                equipmentContainer.innerHTML = '<p class="text-red-500">Failed to load equipment.</p>';
+            }
+        });
+
+        const raceSelect = document.getElementById('race');
+        const backgroundSelect = document.getElementById('background');
+
+        async function populateDropdown(url, selectElement, placeholder) {
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+                data.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = item.name;
+                    selectElement.appendChild(option);
+                });
+            } catch (error) {
+                console.error(`Error fetching data for ${placeholder}:`, error);
+            }
+        }
+
+        populateDropdown('/get-races', raceSelect, 'Select a race');
+        populateDropdown('/get-classes', classSelect, 'Select a class');
+        populateDropdown('/get-backgrounds', backgroundSelect, 'Select a background');
+    });
+    </script>
 </body>
 </html>

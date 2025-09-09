@@ -154,6 +154,33 @@
             <h2 class="text-xl font-semibold mb-4">Create Your First Character</h2>
             {% include 'index.html' %}
         {% endif %}
+
+        <!-- Character summary section -->
+        <div class="character-summary mt-8">
+            <h2 class="text-xl font-semibold mb-4">Character Summary</h2>
+            {% for character in characters %}
+            <div class="character-card p-4 mb-4 bg-white rounded-lg shadow-md">
+                <h2 class="text-lg font-bold">{{ character.name }}</h2>
+                <p>Level: {{ character.level }}</p>
+                <p>Race: {{ character.race.name }}</p>
+                <p>Class: {{ character.character_class.name }}</p>
+                <p>Alignment: {{ character.alignment }}</p>
+                <p>HP: {{ character.hp }}</p>
+                <p>Skills:</p>
+                <ul>
+                    {% for skill in character.proficiencies %}
+                    <li>{{ skill.name }}</li>
+                    {% endfor %}
+                </ul>
+                <p>Equipment:</p>
+                <ul>
+                    {% for item in character.inventory %}
+                    <li>{{ item.name }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
     </div>
 </body>
 </html>

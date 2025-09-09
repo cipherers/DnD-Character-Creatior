@@ -157,3 +157,15 @@ class Equipment(db.Model):
     damage_dice = db.Column(db.String, nullable=True)
     damage_type = db.Column(db.String, nullable=True)
     ac = db.Column(db.Integer, nullable=True)
+
+def seed_database():
+    # ...existing code...
+
+    # Add skills and equipment
+    skill_athletics = Skill(name='Athletics', description='Physical prowess and strength.', associated_attribute='strength')
+    skill_stealth = Skill(name='Stealth', description='Hiding and moving quietly.', associated_attribute='dexterity')
+    equipment_sword = Equipment(name='LongSword', description='A classic one-handed sword.', item_type='Weapon', damage_dice='1d8', damage_type='Slashing')
+    equipment_shield = Equipment(name='Shield', description='Provides protection.', item_type='Armor', ac=2)
+
+    db.session.add_all([skill_athletics, skill_stealth, equipment_sword, equipment_shield])
+    db.session.commit()

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import random
 
@@ -154,22 +154,13 @@ def logout():
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    user = User.query.get(session['user_id'])
-    characters = user.characters
-    if not characters:
-        # No characters: show character creator UI in dashboard layout
-        races = Race.query.all()
-        classes = Class.query.all()
-        backgrounds = Background.query.all()
-        return render_template('dashboard.html', characters=[], races=races, classes=classes, backgrounds=backgrounds)
 
-    # Characters exist: show dashboard with character list
-    # For performance, show up to 10 at a time (pagination can be added later)
-    page = int(request.args.get('page', 1))
-    per_page = 10
-    paginated = characters[(page-1)*per_page:page*per_page]
-    total = len(characters)
-    return render_template('dashboard.html', characters=paginated, total=total, page=page, per_page=per_page)
+    user = User.query.get(session['user_id'])
+    characters = Character.query.filter_by(user_id=user.id).all()
+    total = len(characters)  # Calculate the total number of characters
+    per_page = 10  # Define the number of characters per page
+
+    return render_template('dashboard.html', characters=characters, total=total, per_page=per_page)
 
 @app.route('/create-character', methods=['GET', 'POST'])
 def create_character():
@@ -189,6 +180,9 @@ def create_character():
     race_id = request.form.get('race')
     character_class_id = request.form.get('class')  # Fix: match form field name
     character_level = request.form.get('level', 1)
+    alignment = request.form.get('alignment')
+    hp = request.form.get('hp')
+
     # Fetch the full Race and Class objects from the database
     selected_race = Race.query.get(race_id) if race_id else None
     selected_class = Class.query.get(character_class_id) if character_class_id else None
@@ -290,6 +284,40 @@ def create_character():
         db.session.commit()
         flash(f"Character '{new_character.name}' created with manual ability scores!")
 
+    # Handle selected skills
+    selected_skill_ids = request.form.getlist('skills')
+    selected_skills = Skill.query.filter(Skill.id.in_(selected_skill_ids)).all()
+
+    # Handle selected equipment
+    selected_equipment_ids = request.form.getlist('equipment')
+    selected_equipment = Equipment.query.filter(Equipment.id.in_(selected_equipment_ids)).all()
+
+    new_character = Character(
+        name=character_name,
+        age=age_val,
+        alignment='Neutral',
+        hp=selected_class.hit_die if selected_class and selected_class.hit_die else 10,
+        strength=strength_val,
+        dexterity=dexterity_val,
+        constitution=constitution_val,
+        intelligence=intelligence_val,
+        wisdom=wisdom_val,
+        charisma=charisma_val,
+        race=selected_race, # Pass the Race object
+        character_class=selected_class, # Pass the Class object
+        background=selected_background,
+        user=user,
+        level=lvl
+    )
+
+    # Add skills and equipment to the character
+    new_character.proficiencies.extend(selected_skills)
+    new_character.inventory.extend(selected_equipment)
+
+    db.session.add(new_character)
+    db.session.commit()
+    flash(f"Character '{new_character.name}' created with selected skills and equipment!")
+
     return redirect(url_for('dashboard'))
 
 
@@ -311,6 +339,35 @@ def delete_character(char_id):
     flash(f"Character '{char.name}' deleted.")
     return redirect(url_for('dashboard'))
 
+@app.route('/get-class-details/<int:class_id>')
+def get_class_details(class_id):
+    character_class = Class.query.get(class_id)
+    if not character_class:
+        return jsonify({'error': 'Class not found'}), 404
+
+    # Fetch skills and equipment associated with the class
+    skills = Skill.query.all()  # Adjust this if skills are tied to classes
+    equipment = Equipment.query.all()  # Adjust this if equipment is tied to classes
+
+    return jsonify({
+        'skills': [{'id': skill.id, 'name': skill.name} for skill in skills],
+        'equipment': [{'id': equip.id, 'name': equip.name} for equip in equipment]
+    })
+
+@app.route('/get-races')
+def get_races():
+    races = Race.query.all()
+    return jsonify([{'id': race.id, 'name': race.name} for race in races])
+
+@app.route('/get-classes')
+def get_classes():
+    classes = Class.query.all()
+    return jsonify([{'id': cls.id, 'name': cls.name} for cls in classes])
+
+@app.route('/get-backgrounds')
+def get_backgrounds():
+    backgrounds = Background.query.all()
+    return jsonify([{'id': bg.id, 'name': bg.name} for bg in backgrounds])
 
 # --- Run the Application ---
 if __name__ == '__main__':
