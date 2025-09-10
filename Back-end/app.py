@@ -1,4 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+
+# Ensure jsonify is imported correctly for JSON responses
+
 from flask_sqlalchemy import SQLAlchemy
 import random
 
@@ -296,9 +299,24 @@ def get_class_details(class_id):
     if not character_class:
         return jsonify({'error': 'Class not found'}), 404
 
-    # Fetch skills and equipment associated with the class
-    skills = Skill.query.all()  # Adjust this if skills are tied to classes
-    equipment = Equipment.query.all()  # Adjust this if equipment is tied to classes
+    # Define class-specific rules
+    class_skill_map = {
+        'fighter': ['Athletics', 'Stealth'],
+        'wizard': ['Stealth']
+    }
+
+    class_equipment_map = {
+        'fighter': ['LongSword', 'Shield'],
+        'wizard': ['LongSword']
+    }
+
+    # Get allowed skills and equipment for the class
+    allowed_skills = class_skill_map.get(character_class.name.lower(), [])
+    allowed_equipment = class_equipment_map.get(character_class.name.lower(), [])
+
+    # Fetch skills and equipment from the database
+    skills = Skill.query.filter(Skill.name.in_(allowed_skills)).all()
+    equipment = Equipment.query.filter(Equipment.name.in_(allowed_equipment)).all()
 
     return jsonify({
         'skills': [{'id': skill.id, 'name': skill.name} for skill in skills],
