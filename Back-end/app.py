@@ -208,7 +208,7 @@ def create_character():
     race_id = request.form.get('race')
     character_class_id = request.form.get('class')
     character_level = request.form.get('level', 1)
-    alignment = request.form.get('alignment', 'Neutral')
+    alignment = request.form.get('alignment', 'neutral')
     hp = request.form.get('hp', 10)
 
     selected_race = Race.query.get(race_id)
@@ -230,7 +230,7 @@ def create_character():
     new_character = Character(
         name=character_name,
         age=age_val,
-        alignment=alignment,
+        alignment=alignment,  # Use the selected alignment
         hp=hp,
         strength=0,
         dexterity=0,
