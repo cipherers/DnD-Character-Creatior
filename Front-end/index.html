@@ -282,26 +282,24 @@ Object.keys(CLASS_SKILL_MAP || {}).forEach(function(k) {
 document.addEventListener('DOMContentLoaded', async function () {
     const classSelect = document.getElementById('class');
     const skillsContainer = document.getElementById('skills-container');
-    const equipmentContainer = document.getElementById('equipment-container');
 
-    let classDetails = {};
+    let classSkillMap = {};
 
-    // Fetch the class-to-skill and equipment mapping from the backend
+    // Fetch the class-to-skill mapping from the backend
     try {
-        const response = await fetch('/get-class-details');
+        const response = await fetch('/get-class-skill-map');
         if (response.ok) {
-            classDetails = await response.json();
+            classSkillMap = await response.json();
         } else {
-            console.error('Failed to fetch class details');
+            console.error('Failed to fetch class-skill map');
         }
     } catch (error) {
-        console.error('Error fetching class details:', error);
+        console.error('Error fetching class-skill map:', error);
     }
 
-    function updateClassDetails() {
+    function updateSkillCheckboxes() {
         const selectedClass = classSelect.value.toLowerCase();
-        const allowedSkills = classDetails[selectedClass]?.skills || [];
-        const allowedEquipment = classDetails[selectedClass]?.equipment || [];
+        const allowedSkills = classSkillMap[selectedClass] || [];
 
         // Update skills
         document.querySelectorAll('#skills-container .form-checkbox').forEach(cb => {
@@ -309,32 +307,16 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (allowedSkills.includes(skillName)) {
                 cb.disabled = false;
                 cb.parentElement.classList.remove('opacity-50');
-                cb.parentElement.classList.add('opacity-100');
             } else {
                 cb.disabled = true;
-                cb.parentElement.classList.remove('opacity-100');
-                cb.parentElement.classList.add('opacity-50');
-            }
-        });
-
-        // Update equipment
-        document.querySelectorAll('#equipment-container .form-checkbox').forEach(cb => {
-            const equipmentName = cb.nextElementSibling.textContent.trim();
-            if (allowedEquipment.includes(equipmentName)) {
-                cb.disabled = false;
-                cb.parentElement.classList.remove('opacity-50');
-                cb.parentElement.classList.add('opacity-100');
-            } else {
-                cb.disabled = true;
-                cb.parentElement.classList.remove('opacity-100');
                 cb.parentElement.classList.add('opacity-50');
             }
         });
     }
 
     if (classSelect) {
-        classSelect.addEventListener('change', updateClassDetails);
-        updateClassDetails(); // Initialize on page load
+        classSelect.addEventListener('change', updateSkillCheckboxes);
+        updateSkillCheckboxes(); // Initialize on page load
     }
 });
 </script>
