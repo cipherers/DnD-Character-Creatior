@@ -320,6 +320,15 @@ def get_backgrounds():
     backgrounds = Background.query.all()
     return jsonify([{'id': bg.id, 'name': bg.name} for bg in backgrounds])
 
+@app.route('/get-class-skill-map', methods=['GET'])
+def get_class_skill_map_route():
+    """API endpoint to fetch the class-to-skill mapping."""
+    try:
+        class_skill_map = get_class_skill_map()
+        return jsonify(class_skill_map)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # --- Run the Application ---
 if __name__ == '__main__':
     # Run the seeding function before starting the server
