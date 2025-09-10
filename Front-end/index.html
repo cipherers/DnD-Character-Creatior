@@ -105,20 +105,6 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div>
-                    <label for="alignment" class="block text-sm font-medium text-gray-700">Alignment</label>
-                    <select id="alignment" name="alignment" class="form-input mt-1">
-                        <option value="lawful-good">Lawful Good</option>
-                        <option value="neutral-good">Neutral Good</option>
-                        <option value="chaotic-good">Chaotic Good</option>
-                        <option value="lawful-neutral">Lawful Neutral</option>
-                        <option value="neutral" selected>Neutral</option>
-                        <option value="chaotic-neutral">Chaotic Neutral</option>
-                        <option value="lawful-evil">Lawful Evil</option>
-                        <option value="neutral-evil">Neutral Evil</option>
-                        <option value="chaotic-evil">Chaotic Evil</option>
-                    </select>
-                </div>
             </div>
 
             <!-- Ability Score Inputs -->
@@ -126,7 +112,15 @@
             <div>
                 <h2 class="text-xl font-bold mb-4">Ability Scores</h2>
                 <div class="mb-4">
-                    <p class="text-sm text-gray-500">Enter your ability scores (3-20) or use the "Roll Random Scores" button below to generate them automatically, And submit the character in the same motion.</p>
+                    <h3 class="font-medium mb-2">Proficiencies (Skills)</h3>
+                    <div id="skills-list" class="grid grid-cols-2 gap-2">
+                        {% for skill in skills %}
+                            <label class="inline-flex items-center space-x-2 text-sm">
+                                <input type="checkbox" id="skill_{{ skill.id }}" name="skill_{{ skill.id }}" class="form-input skill-checkbox" />
+                                <span>{{ skill.name }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <div>
@@ -293,62 +287,28 @@ Object.keys(CLASS_SKILL_MAP || {}).forEach(function(k) {
     CLASS_SKILL_MAP_STR[String(k)] = CLASS_SKILL_MAP[k];
 });
 
-document.addEventListener('DOMContentLoaded', async function () {
+function updateSkillCheckboxes() {
     const classSelect = document.getElementById('class');
-    const skillsContainer = document.getElementById('skills-container');
-    const equipmentContainer = document.getElementById('equipment-container');
-
-    let classDetails = {};
-
-    // Fetch the class-to-skill and equipment mapping from the backend
-    try {
-        const response = await fetch('/get-class-details');
-        if (response.ok) {
-            classDetails = await response.json();
+    const selected = classSelect ? classSelect.value : '';
+    const allowed = CLASS_SKILL_MAP_STR[selected] || [];
+    document.querySelectorAll('.skill-checkbox').forEach(function(cb) {
+        const id = parseInt(cb.id.replace('skill_', ''), 10);
+        if (allowed.includes(id)) {
+            cb.disabled = false;
+            cb.parentElement.classList.remove('opacity-50');
         } else {
-            console.error('Failed to fetch class details');
+            cb.disabled = true;
+            cb.checked = false;
+            cb.parentElement.classList.add('opacity-50');
         }
-    } catch (error) {
-        console.error('Error fetching class details:', error);
-    }
+    });
+}
 
-    function updateClassDetails() {
-        const selectedClass = classSelect.value.toLowerCase();
-        const allowedSkills = classDetails[selectedClass]?.skills || [];
-        const allowedEquipment = classDetails[selectedClass]?.equipment || [];
-
-        // Update skills
-        document.querySelectorAll('#skills-container .form-checkbox').forEach(cb => {
-            const skillName = cb.nextElementSibling.textContent.trim();
-            if (allowedSkills.includes(skillName)) {
-                cb.disabled = false;
-                cb.parentElement.classList.remove('opacity-50');
-                cb.parentElement.classList.add('opacity-100');
-            } else {
-                cb.disabled = true;
-                cb.parentElement.classList.remove('opacity-100');
-                cb.parentElement.classList.add('opacity-50');
-            }
-        });
-
-        // Update equipment
-        document.querySelectorAll('#equipment-container .form-checkbox').forEach(cb => {
-            const equipmentName = cb.nextElementSibling.textContent.trim();
-            if (allowedEquipment.includes(equipmentName)) {
-                cb.disabled = false;
-                cb.parentElement.classList.remove('opacity-50');
-                cb.parentElement.classList.add('opacity-100');
-            } else {
-                cb.disabled = true;
-                cb.parentElement.classList.remove('opacity-100');
-                cb.parentElement.classList.add('opacity-50');
-            }
-        });
-    }
-
+document.addEventListener('DOMContentLoaded', function() {
+    const classSelect = document.getElementById('class');
     if (classSelect) {
-        classSelect.addEventListener('change', updateClassDetails);
-        updateClassDetails(); // Initialize on page load
+        classSelect.addEventListener('change', updateSkillCheckboxes);
+        updateSkillCheckboxes();
     }
 });
 </script>
