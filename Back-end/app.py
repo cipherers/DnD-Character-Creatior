@@ -20,7 +20,7 @@ db.init_app(app)
 
 
 def get_class_skill_map():
-    """Return a dict mapping Class.id -> list of allowed Skill.ids.
+    """Return a dict mapping Class.name -> list of allowed Skill names.
 
     Uses a small rule set: Fighter -> Athletics, Stealth; Wizard -> Stealth; other classes -> all skills.
     """
@@ -29,15 +29,16 @@ def get_class_skill_map():
         'fighter': ['Athletics', 'Stealth'],
         'wizard': ['Stealth'],
     }
-    skills = {s.name: s.id for s in Skill.query.all()}
+    skills = {s.name.lower(): s.id for s in Skill.query.all()}
     mapping = {}
     for cls in Class.query.all():
         allowed_names = rules.get(cls.name.lower(), None)
         if allowed_names is None:
-            # allow all skills when no rule is defined
-            mapping[cls.id] = [s.id for s in Skill.query.all()]
+            # If no specific rules, allow all skills
+            mapping[cls.name] = [s.id for s in Skill.query.all()]
         else:
-            mapping[cls.id] = [skills[n] for n in allowed_names if n in skills]
+            # Map only the allowed skills
+            mapping[cls.name] = [skills[name.lower()] for name in allowed_names if name.lower() in skills]
     return mapping
 
 # --- Database Seeding Function ---
@@ -297,8 +298,17 @@ def get_class_details(class_id):
         return jsonify({'error': 'Class not found'}), 404
 
     # Fetch skills and equipment associated with the class
-    skills = Skill.query.all()  # Adjust this if skills are tied to classes
-    equipment = Equipment.query.all()  # Adjust this if equipment is tied to classes
+    class_skill_map = get_class_skill_map()
+    allowed_skill_ids = class_skill_map.get(character_class.name, [])
+    skills = Skill.query.filter(Skill.id.in_(allowed_skill_ids)).all()
+
+    # Define equipment rules by class name (case-insensitive)
+    equipment_rules = {
+        'fighter': ['LongSword', 'Shield'],
+        'wizard': ['LongSword'],
+    }
+    allowed_equipment_names = equipment_rules.get(character_class.name.lower(), [])
+    equipment = Equipment.query.filter(Equipment.name.in_(allowed_equipment_names)).all()
 
     return jsonify({
         'skills': [{'id': skill.id, 'name': skill.name} for skill in skills],
@@ -328,6 +338,33 @@ def get_class_skill_map_route():
         return jsonify(class_skill_map)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/get-character/<int:character_id>', methods=['GET'])
+def get_character(character_id):
+    character = Character.query.get_or_404(character_id)
+    available_skills = Skill.query.all()
+    return jsonify({
+        'id': character.id,
+        'level': character.level,
+        'skills': [skill.id for skill in character.proficiencies],
+        'available_skills': [{'id': skill.id, 'name': skill.name} for skill in available_skills]
+    })
+
+@app.route('/update-character', methods=['POST'])
+def update_character():
+    character_id = request.form.get('character_id')
+    level = request.form.get('level')
+    skill_ids = request.form.getlist('skills')
+
+    character = Character.query.get_or_404(character_id)
+    character.level = int(level)
+
+    # Update skills
+    selected_skills = Skill.query.filter(Skill.id.in_(skill_ids)).all()
+    character.proficiencies = selected_skills
+
+    db.session.commit()
+    return jsonify({'message': 'Character updated successfully'})
 
 # --- Run the Application ---
 if __name__ == '__main__':

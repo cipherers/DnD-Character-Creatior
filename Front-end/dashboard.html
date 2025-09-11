@@ -93,6 +93,10 @@
                                         <div class="text-sm text-gray-500">Level {{ char.level }} • Age {{ char.age }}</div>
                                     </div>
                                 </div>
+                                <!-- Add Edit Button to Character Card -->
+                                <div class="character-card" data-id="{{ char.id }}" data-name="{{ char.name }}" data-level="{{ char.level }}" data-skills="{{ char.proficiencies|join(',') }}">
+                                    <button class="btn btn-secondary edit-character-btn" data-id="{{ char.id }}">Edit</button>
+                                </div>
                             </li>
                         {% endfor %}
                         </ul>
@@ -182,6 +186,28 @@
             {% endfor %}
         </div>
     </div>
+
+    <!-- Modal for Editing Character -->
+    <div id="edit-character-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
+        <div class="form-container p-8 md:p-10 w-full max-w-md">
+            <h2 class="text-2xl font-bold text-center mb-4">Edit Character</h2>
+            <form id="edit-character-form" class="space-y-6">
+                <input type="hidden" id="edit-character-id" name="character_id">
+                <div>
+                    <label for="edit-character-level" class="block text-sm font-medium text-gray-700">Level</label>
+                    <input type="number" id="edit-character-level" name="level" class="form-input" min="1" required>
+                </div>
+                <div>
+                    <label for="edit-character-skills" class="block text-sm font-medium text-gray-700">Skills</label>
+                    <div id="edit-character-skills" class="space-y-2">
+                        <!-- Skills checkboxes will be dynamically populated -->
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-full">Save Changes</button>
+                <button type="button" id="close-edit-modal" class="btn btn-secondary w-full">Cancel</button>
+            </form>
+        </div>
+    </div>
 </body>
 </html>
 
@@ -258,6 +284,71 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('detail-sub').textContent = '';
             empty.classList.remove('hidden');
             content.classList.add('hidden');
+        }
+    });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const editButtons = document.querySelectorAll('.edit-character-btn');
+    const modal = document.getElementById('edit-character-modal');
+    const form = document.getElementById('edit-character-form');
+    const closeModal = document.getElementById('close-edit-modal');
+
+    editButtons.forEach(button => {
+        button.addEventListener('click', async function () {
+            const characterId = this.dataset.id;
+            const response = await fetch(`/get-character/${characterId}`);
+            if (response.ok) {
+                const character = await response.json();
+                document.getElementById('edit-character-id').value = character.id;
+                document.getElementById('edit-character-level').value = character.level;
+
+                const skillsContainer = document.getElementById('edit-character-skills');
+                skillsContainer.innerHTML = '';
+                character.available_skills.forEach(skill => {
+                    const isChecked = character.skills.includes(skill.id);
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `skill-${skill.id}`;
+                    checkbox.name = 'skills';
+                    checkbox.value = skill.id;
+                    checkbox.checked = isChecked;
+
+                    const label = document.createElement('label');
+                    label.htmlFor = `skill-${skill.id}`;
+                    label.textContent = skill.name;
+
+                    const div = document.createElement('div');
+                    div.appendChild(checkbox);
+                    div.appendChild(label);
+
+                    skillsContainer.appendChild(div);
+                });
+
+                modal.classList.remove('hidden');
+            }
+        });
+    });
+
+    closeModal.addEventListener('click', function () {
+        modal.classList.add('hidden');
+    });
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const formData = new FormData(form);
+        const response = await fetch('/update-character', {
+            method: 'POST',
+            body: formData
+        });
+        if (response.ok) {
+            alert('Character updated successfully!');
+            modal.classList.add('hidden');
+            location.reload();
+        } else {
+            alert('Failed to update character.');
         }
     });
 });
