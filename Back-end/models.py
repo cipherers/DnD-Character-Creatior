@@ -74,6 +74,9 @@ class Character(db.Model):
     proficiencies = db.relationship('Skill', secondary=character_proficiencies, backref=db.backref('characters_with_skill'), lazy=True)
     inventory = db.relationship('Equipment', secondary=character_equipment, backref=db.backref('characters_with_equipment'), lazy=True)
 
+    # Track last updated level for ability scores
+    last_updated_level = db.Column(db.Integer, nullable=False, default=0)
+
     def __init__(self, name, age, alignment, hp, strength, dexterity, constitution, intelligence, wisdom, charisma, race, character_class, level, background=None, user=None):
         self.name = name
         self.age = age

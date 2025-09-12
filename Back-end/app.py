@@ -359,8 +359,11 @@ def update_character():
     character = Character.query.get_or_404(character_id)
     character.level = int(level)
 
-    # Validation: Ensure level is divisible by 4 and not equal to 1 when divided
-    if character.level % 4 == 0 and character.level // 4 != 1:
+    # Check if ability scores have already been updated for the current level
+    if character.level >= 4 and character.level % 4 == 0:
+        if character.last_updated_level == character.level:
+            return jsonify({"error": "Ability scores have already been increased."}), 400
+
         ability_modification = request.form.get('ability_modification')
         if ability_modification == 'all_plus_one':
             # Add 1 to all ability scores
@@ -374,6 +377,27 @@ def update_character():
             selected_ability = request.form.get('selected_ability')
             if selected_ability in ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma']:
                 setattr(character, selected_ability, getattr(character, selected_ability) + 2)
+
+        # Update the last_updated_level to the current level
+        character.last_updated_level = character.level
+
+    selected_ability = None  # Initialize selected_ability to avoid UnboundLocalError
+
+    # Debugging: Log ability modification and selected ability
+    print(f"Ability modification: {ability_modification}")
+    if selected_ability:
+        print(f"Selected ability: {selected_ability}")
+
+    # Ensure the character object is marked as modified
+    db.session.add(character)
+
+    # Debugging: Log updated ability scores
+    print(f"Updated Strength: {character.strength}")
+    print(f"Updated Dexterity: {character.dexterity}")
+    print(f"Updated Constitution: {character.constitution}")
+    print(f"Updated Intelligence: {character.intelligence}")
+    print(f"Updated Wisdom: {character.wisdom}")
+    print(f"Updated Charisma: {character.charisma}")
 
     # Update skills
     selected_skills = Skill.query.filter(Skill.id.in_(skill_ids)).all()

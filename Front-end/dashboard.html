@@ -368,6 +368,12 @@ document.addEventListener('DOMContentLoaded', function () {
             formData.append('selected_ability', selectedAbility);
         }
 
+        // Append selected skills to the form data
+        const selectedSkills = document.querySelectorAll('#edit-character-skills input[type="checkbox"]:checked');
+        selectedSkills.forEach(skill => {
+            formData.append('skills', skill.value);
+        });
+
         const response = await fetch('/update-character', {
             method: 'POST',
             body: formData
@@ -393,5 +399,53 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             singleAbilityDiv.classList.add('hidden');
         }
+    });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const editButtons = document.querySelectorAll('.edit-character-btn');
+    const modal = document.getElementById('edit-character-modal');
+    const form = document.getElementById('edit-character-form');
+    const closeModal = document.getElementById('close-edit-modal');
+
+    editButtons.forEach(button => {
+        button.addEventListener('click', function () {
+            const characterLevel = parseInt(button.dataset.level, 10);
+
+            // Check if the character's level is valid for ability score improvement
+            if (characterLevel < 4 || characterLevel % 4 !== 0) {
+                alert("Your character's level isn't high enough for your next ability score improvement.");
+                return; // Prevent further actions
+            }
+
+            // Open the modal if the level is valid
+            modal.classList.remove('hidden');
+        });
+    });
+
+    closeModal.addEventListener('click', function () {
+        modal.classList.add('hidden');
+    });
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        // Add form submission logic here
+    });
+});
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('edit-character-form');
+        const popupMessage = document.getElementById('popup-message'); // Assuming a popup element exists
+
+        form.addEventListener('submit', function (e) {
+            // Check if the popup is visible
+            if (popupMessage && !popupMessage.classList.contains('hidden')) {
+                e.preventDefault(); // Prevent form submission
+                alert('You cannot update the ability score due to invalid conditions.');
+            }
+        });
     });
 </script>

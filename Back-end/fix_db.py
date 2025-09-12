@@ -48,6 +48,15 @@ if 'user_id' not in cols:
 else:
     print('user_id already present')
 
+# Add last_updated_level column if it does not exist
+if 'last_updated_level' not in cols:
+    print("Adding last_updated_level column to characters...")
+    cur.execute("ALTER TABLE characters ADD COLUMN last_updated_level INTEGER DEFAULT 0")
+    conn.commit()
+    cur.execute("PRAGMA table_info(characters)")
+    cols = [row[1] for row in cur.fetchall()]
+    print('characters columns after adding last_updated_level:', cols)
+
 # Ensure users table exists
 cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
 if not cur.fetchone():
