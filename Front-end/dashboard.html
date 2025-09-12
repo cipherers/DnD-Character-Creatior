@@ -203,6 +203,25 @@
                         <!-- Skills checkboxes will be dynamically populated -->
                     </div>
                 </div>
+                <div>
+                    <label for="edit-ability-modification" class="block text-sm font-medium text-gray-700">Ability Score Modification</label>
+                    <select id="edit-ability-modification" name="ability_modification" class="form-input">
+                        <option value="">None</option>
+                        <option value="all_plus_one">Add 1 to all ability scores</option>
+                        <option value="single_plus_two">Add 2 to one ability score</option>
+                    </select>
+                </div>
+                <div id="edit-single-ability" class="hidden">
+                    <label for="edit-selected-ability" class="block text-sm font-medium text-gray-700">Select Ability</label>
+                    <select id="edit-selected-ability" name="selected_ability" class="form-input">
+                        <option value="strength">Strength</option>
+                        <option value="dexterity">Dexterity</option>
+                        <option value="constitution">Constitution</option>
+                        <option value="intelligence">Intelligence</option>
+                        <option value="wisdom">Wisdom</option>
+                        <option value="charisma">Charisma</option>
+                    </select>
+                </div>
                 <button type="submit" class="btn btn-primary w-full">Save Changes</button>
                 <button type="button" id="close-edit-modal" class="btn btn-secondary w-full">Cancel</button>
             </form>
@@ -339,17 +358,40 @@ document.addEventListener('DOMContentLoaded', function () {
     form.addEventListener('submit', async function (e) {
         e.preventDefault();
         const formData = new FormData(form);
+
+        // Include ability modification and selected ability in the form data
+        const abilityModification = document.getElementById('edit-ability-modification').value;
+        formData.append('ability_modification', abilityModification);
+
+        if (abilityModification === 'single_plus_two') {
+            const selectedAbility = document.getElementById('edit-selected-ability').value;
+            formData.append('selected_ability', selectedAbility);
+        }
+
         const response = await fetch('/update-character', {
             method: 'POST',
             body: formData
         });
+
         if (response.ok) {
             alert('Character updated successfully!');
             modal.classList.add('hidden');
             location.reload();
         } else {
-            alert('Failed to update character.');
+            const error = await response.json();
+            alert(`Failed to update character: ${error.error}`);
         }
     });
 });
+</script>
+
+<script>
+    document.getElementById('edit-ability-modification').addEventListener('change', function () {
+        const singleAbilityDiv = document.getElementById('edit-single-ability');
+        if (this.value === 'single_plus_two') {
+            singleAbilityDiv.classList.remove('hidden');
+        } else {
+            singleAbilityDiv.classList.add('hidden');
+        }
+    });
 </script>

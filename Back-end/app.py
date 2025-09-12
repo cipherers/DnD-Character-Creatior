@@ -359,6 +359,22 @@ def update_character():
     character = Character.query.get_or_404(character_id)
     character.level = int(level)
 
+    # Validation: Ensure level is divisible by 4 and not equal to 1 when divided
+    if character.level % 4 == 0 and character.level // 4 != 1:
+        ability_modification = request.form.get('ability_modification')
+        if ability_modification == 'all_plus_one':
+            # Add 1 to all ability scores
+            character.strength += 1
+            character.dexterity += 1
+            character.constitution += 1
+            character.intelligence += 1
+            character.wisdom += 1
+            character.charisma += 1
+        elif ability_modification == 'single_plus_two':
+            selected_ability = request.form.get('selected_ability')
+            if selected_ability in ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma']:
+                setattr(character, selected_ability, getattr(character, selected_ability) + 2)
+
     # Update skills
     selected_skills = Skill.query.filter(Skill.id.in_(skill_ids)).all()
     character.proficiencies = selected_skills
