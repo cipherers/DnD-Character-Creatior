@@ -69,6 +69,9 @@
             </div>
             <button type="submit" class="btn btn-primary w-full">Add Information</button>
         </form>
+        <div class="flex justify-center mt-6">
+            <a href="/" class="btn btn-secondary">Back to Login</a>
+        </div>
     </div>
 
     <script>
@@ -79,7 +82,7 @@
 
             const fieldTemplates = {
                 race: [
-                    { label: 'Ability Score Bonuses', name: 'ability_score_bonuses', type: 'text', placeholder: 'e.g., Strength +2, Dexterity +1' },
+                    { label: 'Ability Score Bonuses', name: 'ability_score_bonuses', type: 'int', placeholder: 'e.g., Strength +2, Dexterity +1' },
                     { label: 'Natural Skills', name: 'natural_skills', type: 'text', placeholder: 'e.g., Darkvision, Fey Ancestry' }
                 ],
                 class: [
