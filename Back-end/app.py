@@ -406,6 +406,62 @@ def update_character():
     db.session.commit()
     return jsonify({'message': 'Character updated successfully'})
 
+@app.route('/add-dnd-info', methods=['POST'])
+def add_dnd_info():
+    """Endpoint to dynamically add new DND information based on type."""
+    data = request.form
+    info_type = data.get('type')
+    name = data.get('name')
+    description = data.get('description')
+
+    if not all([info_type, name, description]):
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    if info_type == 'race':
+        ability_score_bonuses = data.get('ability_score_bonuses')
+        natural_skills = data.get('natural_skills')
+        new_info = Race(name=name, description=description, strength_bonus=0, dexterity_bonus=0, constitution_bonus=0, intelligence_bonus=0, wisdom_bonus=0, charisma_bonus=0)
+        # Parse ability_score_bonuses and update new_info fields accordingly
+    elif info_type == 'class':
+        hit_dice = data.get('hit_dice')
+        new_info = Class(name=name, description=description, hit_die=hit_dice)
+    elif info_type == 'equipment':
+        damage_type = data.get('damage_type')
+        armor_class = data.get('armor_class')
+        damage_amount = data.get('damage_amount')
+        new_info = Equipment(name=name, description=description, item_type='Weapon', damage_dice=damage_amount, damage_type=damage_type, ac=armor_class)
+    else:
+        return jsonify({'error': 'Invalid type'}), 400
+
+    db.session.add(new_info)
+    db.session.commit()
+    return jsonify({'message': 'DND information added successfully'}), 201
+
+
+@app.route('/get-dnd-info', methods=['GET'])
+def get_dnd_info():
+    """Endpoint to fetch all DND information."""
+    races = Race.query.all()
+    classes = Class.query.all()
+    skills = Skill.query.all()
+    equipment = Equipment.query.all()
+
+    data = []
+    for race in races:
+        data.append({'type': 'Race', 'name': race.name, 'description': race.description})
+    for cls in classes:
+        data.append({'type': 'Class', 'name': cls.name, 'description': cls.description})
+    for skill in skills:
+        data.append({'type': 'Ability', 'name': skill.name, 'description': skill.description})
+    for equip in equipment:
+        data.append({'type': 'Weapon', 'name': equip.name, 'description': equip.description})
+
+    return jsonify(data), 200
+
+@app.route('/add-dnd-info')
+def add_dnd_info_page():
+    return render_template('add_dnd_info.html')
+
 # --- Run the Application ---
 if __name__ == '__main__':
     # Run the seeding function before starting the server

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add DND Information</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+        .form-container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .form-input {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 0.75rem;
+            width: 100%;
+            transition: border-color 0.2s ease;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            color: #ffffff;
+            transition: background-color 0.2s ease;
+        }
+        .btn-primary {
+            background-color: #4f46e5;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="form-container p-8 md:p-10 w-full max-w-4xl">
+        <h1 class="text-3xl font-bold text-center mb-6">Add DND Information</h1>
+        <form id="add-dnd-info-form" class="space-y-6">
+            <div>
+                <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
+                <select id="type" name="type" class="form-input">
+                    <option value="race">Race</option>
+                    <option value="class">Class</option>
+                    <option value="ability">Ability</option>
+                    <option value="weapon">Weapon</option>
+                </select>
+            </div>
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+                <input type="text" id="name" name="name" class="form-input" required autocomplete="name">
+            </div>
+            <div>
+                <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea id="description" name="description" class="form-input" rows="4" required></textarea>
+            </div>
+            <div id="dynamic-fields-container" class="space-y-4">
+                <!-- Dynamic fields will be rendered here -->
+            </div>
+            <button type="submit" class="btn btn-primary w-full">Add Information</button>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('add-dnd-info-form');
+            const typeSelect = document.getElementById('type');
+            const dynamicFieldsContainer = document.getElementById('dynamic-fields-container');
+
+            const fieldTemplates = {
+                race: [
+                    { label: 'Ability Score Bonuses', name: 'ability_score_bonuses', type: 'text', placeholder: 'e.g., Strength +2, Dexterity +1' },
+                    { label: 'Natural Skills', name: 'natural_skills', type: 'text', placeholder: 'e.g., Darkvision, Fey Ancestry' }
+                ],
+                class: [
+                    { label: 'Hit Dice', name: 'hit_dice', type: 'text', placeholder: 'e.g., 1d10' }
+                ],
+                ability: [
+                    { label: 'Ability Type', name: 'ability_type', type: 'text', placeholder: 'e.g., Spellcasting' },
+                    { label: 'Effect', name: 'effect', type: 'text', placeholder: 'e.g., Fireball damage' }
+                ],
+                weapon: [
+                    { label: 'Weapon Type', name: 'weapon_type', type: 'text', placeholder: 'e.g., Sword' },
+                    { label: 'Damage', name: 'damage', type: 'text', placeholder: 'e.g., 1d6' }
+                ]
+            };
+
+            function renderDynamicFields(type) {
+                dynamicFieldsContainer.innerHTML = '';
+                const fields = fieldTemplates[type] || [];
+                fields.forEach(field => {
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <label for="${field.name}" class="block text-sm font-medium text-gray-700">${field.label}</label>
+                        <input type="${field.type}" id="${field.name}" name="${field.name}" class="form-input" placeholder="${field.placeholder}" required>
+                    `;
+                    dynamicFieldsContainer.appendChild(div);
+                });
+            }
+
+            typeSelect.addEventListener('change', function () {
+                renderDynamicFields(typeSelect.value);
+            });
+
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const formData = new FormData(form);
+                try {
+                    const response = await fetch('/add-dnd-info', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (response.ok) {
+                        alert('DND Information added successfully!');
+                        form.reset();
+                        renderDynamicFields(typeSelect.value);
+                    } else {
+                        alert('Failed to add DND Information.');
+                    }
+                } catch (error) {
+                    console.error('Error adding DND information:', error);
+                }
+            });
+
+            renderDynamicFields(typeSelect.value); // Initialize fields on page load
+        });
+    </script>
+</body>
+</html>
