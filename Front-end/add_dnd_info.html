@@ -41,6 +41,19 @@
         .btn-primary:hover {
             background-color: #4338ca;
         }
+        .btn-secondary {
+            background-color: #6b7280; /* Gray-500 */
+            color: #ffffff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-align: center;
+            display: inline-block;
+            transition: background-color 0.2s ease;
+        }
+        .btn-secondary:hover {
+            background-color: #4b5563; /* Gray-700 */
+        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
@@ -70,7 +83,7 @@
             <button type="submit" class="btn btn-primary w-full">Add Information</button>
         </form>
         <div class="flex justify-center mt-6">
-            <a href="/" class="btn btn-secondary">Back to Login</a>
+            <a href="/" class="btn btn-secondary" style="visibility: visible; opacity: 1; display: inline-block;">Back to Login</a>
         </div>
     </div>
 
