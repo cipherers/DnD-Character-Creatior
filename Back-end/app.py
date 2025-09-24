@@ -26,8 +26,19 @@ def get_class_skill_map():
     """
     # Define rules by class name (case-insensitive)
     rules = {
-        'fighter': ['Athletics', 'Stealth'],
-        'wizard': ['Stealth'],
+        'fighter': ['Athletics', 'Survival', 'Intimidation'],
+        'wizard': ['Stealth'], 
+        'rogue': ['Stealth', 'Acrobatics', 'Deception'],
+        'cleric': ['History', 'Insight', 'Medicine'],
+        'ranger': ['Survival', 'Nature', 'Perception'],
+        'paladin': ['Religion', 'Intimidation', 'Persuasion'],
+        'bard': ['Performance', 'Persuasion', 'Deception'],
+        'druid': ['Animal Handling', 'Nature', 'Survival'],
+        'monk': ['Acrobatics', 'Stealth', 'Athletics'],
+        'barbarian': ['Athletics', 'Intimidation', 'Survival'],
+        'sorcerer': ['Arcana', 'Deception', 'Persuasion'],
+        'warlock': ['Arcana', 'Deception', 'Intimidation'],
+        'artificer': ['Arcana', 'History', 'Investigation'],
     }
     skills = {s.name.lower(): s.id for s in Skill.query.all()}
     mapping = {}
