@@ -54,6 +54,11 @@
         .btn-secondary:hover {
             background-color: #4b5563; /* Gray-700 */
         }
+        .visible-inline {
+            visibility: visible;
+            opacity: 1;
+            display: inline-block;
+        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
@@ -78,60 +83,7 @@
                 <textarea id="description" name="description" class="form-input" rows="4" required></textarea>
             </div>
             <div id="dynamic-fields-container" class="space-y-4">
-                <!-- Race-specific fields -->
-                <div id="race-fields" style="display: none;">
-                    <h3 class="text-lg font-semibold">Ability Score Bonuses</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label for="strength_bonus" class="block text-sm font-medium text-gray-700">Strength</label>
-                            <select id="strength_bonus" name="strength_bonus" class="form-input">
-                                <option value="0" selected>0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="dexterity_bonus" class="block text-sm font-medium text-gray-700">Dexterity</label>
-                            <select id="dexterity_bonus" name="dexterity_bonus" class="form-input">
-                                <option value="0" selected>0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="constitution_bonus" class="block text-sm font-medium text-gray-700">Constitution</label>
-                            <select id="constitution_bonus" name="constitution_bonus" class="form-input">
-                                <option value="0" selected>0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="intelligence_bonus" class="block text-sm font-medium text-gray-700">Intelligence</label>
-                            <select id="intelligence_bonus" name="intelligence_bonus" class="form-input">
-                                <option value="0" selected>0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="wisdom_bonus" class="block text-sm font-medium text-gray-700">Wisdom</label>
-                            <select id="wisdom_bonus" name="wisdom_bonus" class="form-input">
-                                <option value="0" selected>0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="charisma_bonus" class="block text-sm font-medium text-gray-700">Charisma</label>
-                            <select id="charisma_bonus" name="charisma_bonus" class="form-input">
-                                <option value="0" selected>0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+            <a href="/" class="btn btn-secondary visible-inline">Back to Login</a>
             </div>
             <button type="submit" class="btn btn-primary w-full">Add Information</button>
         </form>
@@ -145,9 +97,12 @@
             const form = document.getElementById('add-dnd-info-form');
             const typeSelect = document.getElementById('type');
             const dynamicFieldsContainer = document.getElementById('dynamic-fields-container');
-            const raceFields = document.getElementById('race-fields');
 
             const fieldTemplates = {
+                race: [
+                    { label: 'Ability Score Bonuses', name: 'ability_score_bonuses', type: 'int', placeholder: 'e.g., Strength +2, Dexterity +1' },
+                    { label: 'Natural Skills', name: 'natural_skills', type: 'text', placeholder: 'e.g., Darkvision, Fey Ancestry' }
+                ],
                 class: [
                     { label: 'Hit Dice', name: 'hit_dice', type: 'text', placeholder: 'e.g., 1d10' }
                 ],
@@ -162,7 +117,6 @@
             };
 
             function renderDynamicFields(type) {
-                console.log(`Rendering fields for type: ${type}`); // Debug log
                 dynamicFieldsContainer.innerHTML = '';
                 const fields = fieldTemplates[type] || [];
                 fields.forEach(field => {
@@ -173,20 +127,8 @@
                     `;
                     dynamicFieldsContainer.appendChild(div);
                 });
-
-                // Show race-specific fields if "race" is selected
-                if (type === 'race') {
-                    raceFields.style.display = 'block';
-                } else {
-                    console.log('Hiding race fields'); // Debug log
-                    raceFields.classList.add('hidden');
-                }
             }
 
-            // Initialize fields on page load
-            renderDynamicFields(typeSelect.value);
-
-            // Update fields when the type changes
             typeSelect.addEventListener('change', function () {
                 renderDynamicFields(typeSelect.value);
             });
@@ -210,6 +152,8 @@
                     console.error('Error adding DND information:', error);
                 }
             });
+
+            renderDynamicFields(typeSelect.value); // Initialize fields on page load
         });
     </script>
 </body>
