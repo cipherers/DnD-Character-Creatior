@@ -54,6 +54,11 @@
         .btn-secondary:hover {
             background-color: #4b5563; /* Gray-700 */
         }
+        .visible-inline {
+            visibility: visible;
+            opacity: 1;
+            display: inline-block;
+        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
@@ -78,12 +83,12 @@
                 <textarea id="description" name="description" class="form-input" rows="4" required></textarea>
             </div>
             <div id="dynamic-fields-container" class="space-y-4">
-                <!-- Dynamic fields will be rendered here -->
+            <a href="/" class="btn btn-secondary visible-inline">Back to Login</a>
             </div>
             <button type="submit" class="btn btn-primary w-full">Add Information</button>
         </form>
         <div class="flex justify-center mt-6">
-            <a href="/" class="btn btn-secondary" style="visibility: visible; opacity: 1; display: inline-block;">Back to Login</a>
+            <a href="/" class="btn btn-secondary">Back to Login</a>
         </div>
     </div>
 
