@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add DND Information</title>
+    <title>Add DND Info</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -57,7 +57,17 @@
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
-    <div class="form-container p-8 md:p-10 w-full max-w-4xl">
+    <header class="absolute top-0 left-0 w-full bg-gray-800 text-white p-4">
+        <nav class="max-w-5xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">DnD Character Creator</h1>
+            <ul class="flex gap-4">
+                <li><a href="/index.html" class="hover:underline">Home</a></li>
+                <li><a href="/dashboard" class="hover:underline">Dashboard</a></li>
+                <li><a href="/gamer_manual.html" class="hover:underline">Player Manual</a></li>
+            </ul>
+        </nav>
+    </header>
+    <div class="form-container p-8 md:p-10 w-full max-w-4xl mt-20">
         <h1 class="text-3xl font-bold text-center mb-6">Add DND Information</h1>
         <form id="add-dnd-info-form" class="space-y-6">
             <div>
