@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import random
+from flask import session
 
 # Make sure all your model definitions are in a file named 'models.py'
 # and import them here.
