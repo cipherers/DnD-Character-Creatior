@@ -54,11 +54,6 @@
         .btn-secondary:hover {
             background-color: #4b5563; /* Gray-700 */
         }
-        .visible-inline {
-            visibility: visible;
-            opacity: 1;
-            display: inline-block;
-        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
@@ -82,8 +77,8 @@
                 <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
                 <textarea id="description" name="description" class="form-input" rows="4" required></textarea>
             </div>
-            <div id="dynamic-fields-container" class="space-y-4">
-            <a href="/" class="btn btn-secondary visible-inline">Back to Login</a>
+            <div id="dynamic-fields-container" class="space-y-6">
+                <!-- Dynamic fields will be rendered here -->
             </div>
             <button type="submit" class="btn btn-primary w-full">Add Information</button>
         </form>
@@ -99,34 +94,65 @@
             const dynamicFieldsContainer = document.getElementById('dynamic-fields-container');
 
             const fieldTemplates = {
-                race: [
-                    { label: 'Ability Score Bonuses', name: 'ability_score_bonuses', type: 'int', placeholder: 'e.g., Strength +2, Dexterity +1' },
-                    { label: 'Natural Skills', name: 'natural_skills', type: 'text', placeholder: 'e.g., Darkvision, Fey Ancestry' }
-                ],
-                class: [
-                    { label: 'Hit Dice', name: 'hit_dice', type: 'text', placeholder: 'e.g., 1d10' }
-                ],
-                ability: [
-                    { label: 'Ability Type', name: 'ability_type', type: 'text', placeholder: 'e.g., Spellcasting' },
-                    { label: 'Effect', name: 'effect', type: 'text', placeholder: 'e.g., Fireball damage' }
-                ],
-                weapon: [
-                    { label: 'Weapon Type', name: 'weapon_type', type: 'text', placeholder: 'e.g., Sword' },
-                    { label: 'Damage', name: 'damage', type: 'text', placeholder: 'e.g., 1d6' }
-                ]
+                race: `
+                    <h3 class="text-lg font-semibold">Ability Score Bonuses</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="strength_bonus" class="block text-sm font-medium text-gray-700">Strength</label>
+                            <input type="number" id="strength_bonus" name="strength_bonus" class="form-input" min="0" max="2" value="0" required>
+                        </div>
+                        <div>
+                            <label for="dexterity_bonus" class="block text-sm font-medium text-gray-700">Dexterity</label>
+                            <input type="number" id="dexterity_bonus" name="dexterity_bonus" class="form-input" min="0" max="2" value="0" required>
+                        </div>
+                        <div>
+                            <label for="constitution_bonus" class="block text-sm font-medium text-gray-700">Constitution</label>
+                            <input type="number" id="constitution_bonus" name="constitution_bonus" class="form-input" min="0" max="2" value="0" required>
+                        </div>
+                        <div>
+                            <label for="intelligence_bonus" class="block text-sm font-medium text-gray-700">Intelligence</label>
+                            <input type="number" id="intelligence_bonus" name="intelligence_bonus" class="form-input" min="0" max="2" value="0" required>
+                        </div>
+                        <div>
+                            <label for="wisdom_bonus" class="block text-sm font-medium text-gray-700">Wisdom</label>
+                            <input type="number" id="wisdom_bonus" name="wisdom_bonus" class="form-input" min="0" max="2" value="0" required>
+                        </div>
+                        <div>
+                            <label for="charisma_bonus" class="block text-sm font-medium text-gray-700">Charisma</label>
+                            <input type="number" id="charisma_bonus" name="charisma_bonus" class="form-input" min="0" max="2" value="0" required>
+                        </div>
+                    </div>
+                `,
+                class: `
+                    <div>
+                        <label for="hit_dice" class="block text-sm font-medium text-gray-700">Hit Dice</label>
+                        <input type="text" id="hit_dice" name="hit_dice" class="form-input" placeholder="e.g., 1d10" required>
+                    </div>
+                `,
+                ability: `
+                    <div>
+                        <label for="ability_type" class="block text-sm font-medium text-gray-700">Ability Type</label>
+                        <input type="text" id="ability_type" name="ability_type" class="form-input" placeholder="e.g., Spellcasting" required>
+                    </div>
+                    <div>
+                        <label for="effect" class="block text-sm font-medium text-gray-700">Effect</label>
+                        <input type="text" id="effect" name="effect" class="form-input" placeholder="e.g., Fireball damage" required>
+                    </div>
+                `,
+                weapon: `
+                    <div>
+                        <label for="weapon_type" class="block text-sm font-medium text-gray-700">Weapon Type</label>
+                        <input type="text" id="weapon_type" name="weapon_type" class="form-input" placeholder="e.g., Sword" required>
+                    </div>
+                    <div>
+                        <label for="damage" class="block text-sm font-medium text-gray-700">Damage</label>
+                        <input type="text" id="damage" name="damage" class="form-input" placeholder="e.g., 1d6" required>
+                    </div>
+                `
             };
 
             function renderDynamicFields(type) {
-                dynamicFieldsContainer.innerHTML = '';
-                const fields = fieldTemplates[type] || [];
-                fields.forEach(field => {
-                    const div = document.createElement('div');
-                    div.innerHTML = `
-                        <label for="${field.name}" class="block text-sm font-medium text-gray-700">${field.label}</label>
-                        <input type="${field.type}" id="${field.name}" name="${field.name}" class="form-input" placeholder="${field.placeholder}" required>
-                    `;
-                    dynamicFieldsContainer.appendChild(div);
-                });
+                dynamicFieldsContainer.innerHTML = fieldTemplates[type] || '';
             }
 
             typeSelect.addEventListener('change', function () {

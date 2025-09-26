@@ -429,14 +429,33 @@ def add_dnd_info():
         return jsonify({'error': 'Missing required fields'}), 400
 
     if info_type == 'race':
-        ability_score_bonuses = data.get('ability_score_bonuses')
-        natural_skills = data.get('natural_skills')
-        new_info = Race(name=name, description=description, strength_bonus=0, dexterity_bonus=0, constitution_bonus=0, intelligence_bonus=0, wisdom_bonus=0, charisma_bonus=0)
-        # Parse ability_score_bonuses and update new_info fields accordingly
+        # Parse ability score bonuses
+        strength_bonus = int(data.get('strength_bonus', 0))
+        dexterity_bonus = int(data.get('dexterity_bonus', 0))
+        constitution_bonus = int(data.get('constitution_bonus', 0))
+        intelligence_bonus = int(data.get('intelligence_bonus', 0))
+        wisdom_bonus = int(data.get('wisdom_bonus', 0))
+        charisma_bonus = int(data.get('charisma_bonus', 0))
+
+        # Create a new Race object
+        new_info = Race(
+            name=name,
+            description=description,
+            strength_bonus=strength_bonus,
+            dexterity_bonus=dexterity_bonus,
+            constitution_bonus=constitution_bonus,
+            intelligence_bonus=intelligence_bonus,
+            wisdom_bonus=wisdom_bonus,
+            charisma_bonus=charisma_bonus
+        )
     elif info_type == 'class':
         hit_dice = data.get('hit_dice')
         new_info = Class(name=name, description=description, hit_die=hit_dice)
-    elif info_type == 'equipment':
+    elif info_type == 'ability':
+        ability_type = data.get('ability_type')
+        effect = data.get('effect')
+        new_info = Skill(name=name, description=description, associated_attribute=ability_type)
+    elif info_type == 'weapon':
         damage_type = data.get('damage_type')
         armor_class = data.get('armor_class')
         damage_amount = data.get('damage_amount')
