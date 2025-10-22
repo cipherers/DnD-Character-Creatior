@@ -456,11 +456,38 @@ def add_dnd_info():
         ability_type = data.get('ability_type')
         effect = data.get('effect')
         new_info = Skill(name=name, description=description, associated_attribute=ability_type)
-    elif info_type == 'weapon':
-        damage_type = data.get('damage_type')
-        armor_class = data.get('armor_class')
-        damage_amount = data.get('damage_amount')
-        new_info = Equipment(name=name, description=description, item_type='Weapon', damage_dice=damage_amount, damage_type=damage_type, ac=armor_class)
+    elif info_type == 'equipment':
+        item_type = data.get('item_type')
+        if item_type == 'Weapon':
+            damage_dice = data.get('damage_dice')
+            damage_type = data.get('damage_type')
+            new_info = Equipment(
+                name=name,
+                description=description,
+                item_type='Weapon',
+                damage_dice=damage_dice,
+                damage_type=damage_type,
+                ac=None
+            )
+        elif item_type == 'Armor':
+            ac = data.get('ac')
+            new_info = Equipment(
+                name=name,
+                description=description,
+                item_type='Armor',
+                damage_dice=None,
+                damage_type=None,
+                ac=ac
+            )
+        else:
+            new_info = Equipment(
+                name=name,
+                description=description,
+                item_type='Other',
+                damage_dice=None,
+                damage_type=None,
+                ac=None
+            )
     else:
         return jsonify({'error': 'Invalid type'}), 400
 

@@ -72,11 +72,13 @@
         <form id="add-dnd-info-form" class="space-y-6">
             <div>
                 <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
-                <select id="type" name="type" class="form-input">
+                                <select id="type" name="type" class="form-input">
+                    <option value="">Select a type...</option>
                     <option value="race">Race</option>
                     <option value="class">Class</option>
-                    <option value="ability">Ability</option>
-                    <option value="weapon">Weapon</option>
+                    <option value="skill">Skill</option>
+                    <option value="equipment">Equipment</option>
+                    <option value="background">Background</option>
                 </select>
             </div>
             <div>
@@ -103,70 +105,130 @@
             const typeSelect = document.getElementById('type');
             const dynamicFieldsContainer = document.getElementById('dynamic-fields-container');
 
-            const fieldTemplates = {
+                        const fieldTemplates = {
                 race: `
-                    <h3 class="text-lg font-semibold">Ability Score Bonuses</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label for="strength_bonus" class="block text-sm font-medium text-gray-700">Strength</label>
-                            <input type="number" id="strength_bonus" name="strength_bonus" class="form-input" min="0" max="2" value="0" required>
+                            <label class="block text-sm font-medium text-gray-700">Strength Bonus</label>
+                            <input type="number" name="strength_bonus" class="form-input" value="0">
                         </div>
                         <div>
-                            <label for="dexterity_bonus" class="block text-sm font-medium text-gray-700">Dexterity</label>
-                            <input type="number" id="dexterity_bonus" name="dexterity_bonus" class="form-input" min="0" max="2" value="0" required>
+                            <label class="block text-sm font-medium text-gray-700">Dexterity Bonus</label>
+                            <input type="number" name="dexterity_bonus" class="form-input" value="0">
                         </div>
                         <div>
-                            <label for="constitution_bonus" class="block text-sm font-medium text-gray-700">Constitution</label>
-                            <input type="number" id="constitution_bonus" name="constitution_bonus" class="form-input" min="0" max="2" value="0" required>
+                            <label class="block text-sm font-medium text-gray-700">Constitution Bonus</label>
+                            <input type="number" name="constitution_bonus" class="form-input" value="0">
                         </div>
                         <div>
-                            <label for="intelligence_bonus" class="block text-sm font-medium text-gray-700">Intelligence</label>
-                            <input type="number" id="intelligence_bonus" name="intelligence_bonus" class="form-input" min="0" max="2" value="0" required>
+                            <label class="block text-sm font-medium text-gray-700">Intelligence Bonus</label>
+                            <input type="number" name="intelligence_bonus" class="form-input" value="0">
                         </div>
                         <div>
-                            <label for="wisdom_bonus" class="block text-sm font-medium text-gray-700">Wisdom</label>
-                            <input type="number" id="wisdom_bonus" name="wisdom_bonus" class="form-input" min="0" max="2" value="0" required>
+                            <label class="block text-sm font-medium text-gray-700">Wisdom Bonus</label>
+                            <input type="number" name="wisdom_bonus" class="form-input" value="0">
                         </div>
                         <div>
-                            <label for="charisma_bonus" class="block text-sm font-medium text-gray-700">Charisma</label>
-                            <input type="number" id="charisma_bonus" name="charisma_bonus" class="form-input" min="0" max="2" value="0" required>
+                            <label class="block text-sm font-medium text-gray-700">Charisma Bonus</label>
+                            <input type="number" name="charisma_bonus" class="form-input" value="0">
                         </div>
                     </div>
                 `,
                 class: `
                     <div>
-                        <label for="hit_dice" class="block text-sm font-medium text-gray-700">Hit Dice</label>
-                        <input type="text" id="hit_dice" name="hit_dice" class="form-input" placeholder="e.g., 1d10" required>
+                        <label class="block text-sm font-medium text-gray-700">Hit Die</label>
+                        <input type="number" name="hit_die" class="form-input" required>
                     </div>
                 `,
-                ability: `
+                background: '',
+                skill: `
                     <div>
-                        <label for="ability_type" class="block text-sm font-medium text-gray-700">Ability Type</label>
-                        <input type="text" id="ability_type" name="ability_type" class="form-input" placeholder="e.g., Spellcasting" required>
-                    </div>
-                    <div>
-                        <label for="effect" class="block text-sm font-medium text-gray-700">Effect</label>
-                        <input type="text" id="effect" name="effect" class="form-input" placeholder="e.g., Fireball damage" required>
+                        <label class="block text-sm font-medium text-gray-700">Associated Attribute</label>
+                        <select name="associated_attribute" class="form-input" required>
+                            <option value="strength">Strength</option>
+                            <option value="dexterity">Dexterity</option>
+                            <option value="constitution">Constitution</option>
+                            <option value="intelligence">Intelligence</option>
+                            <option value="wisdom">Wisdom</option>
+                            <option value="charisma">Charisma</option>
+                        </select>
                     </div>
                 `,
-                weapon: `
+                equipment: `
                     <div>
-                        <label for="weapon_type" class="block text-sm font-medium text-gray-700">Weapon Type</label>
-                        <input type="text" id="weapon_type" name="weapon_type" class="form-input" placeholder="e.g., Sword" required>
+                        <label class="block text-sm font-medium text-gray-700">Item Type</label>
+                        <select name="item_type" class="form-input" id="item-type-select" required>
+                            <option value="Weapon">Weapon</option>
+                            <option value="Armor">Armor</option>
+                            <option value="Other">Other</option>
+                        </select>
                     </div>
-                    <div>
-                        <label for="damage" class="block text-sm font-medium text-gray-700">Damage</label>
-                        <input type="text" id="damage" name="damage" class="form-input" placeholder="e.g., 1d6" required>
+                    <div id="weapon-fields" class="space-y-4" style="display: none;">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Damage Dice</label>
+                            <input type="text" name="damage_dice" class="form-input" placeholder="e.g., 1d8">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Damage Type</label>
+                            <select name="damage_type" class="form-input">
+                                <option value="Slashing">Slashing</option>
+                                <option value="Piercing">Piercing</option>
+                                <option value="Bludgeoning">Bludgeoning</option>
+                                <option value="Fire">Fire</option>
+                                <option value="Cold">Cold</option>
+                                <option value="Lightning">Lightning</option>
+                                <option value="Acid">Acid</option>
+                                <option value="Thunder">Thunder</option>
+                                <option value="Force">Force</option>
+                                <option value="Necrotic">Necrotic</option>
+                                <option value="Radiant">Radiant</option>
+                                <option value="Poison">Poison</option>
+                                <option value="Psychic">Psychic</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="armor-fields" class="space-y-4" style="display: none;">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Armor Class (AC)</label>
+                            <input type="number" name="ac" class="form-input" min="0">
+                        </div>
                     </div>
                 `
             };
 
             function renderDynamicFields(type) {
                 dynamicFieldsContainer.innerHTML = fieldTemplates[type] || '';
-            }
+                
+                if (type === 'equipment') {
+                    const itemTypeSelect = document.getElementById('item-type-select');
+                    const weaponFields = document.getElementById('weapon-fields');
+                    const armorFields = document.getElementById('armor-fields');
 
-            typeSelect.addEventListener('change', function () {
-                renderDynamicFields(typeSelect.value);
+                    if (itemTypeSelect) {
+                        itemTypeSelect.addEventListener('change', function() {
+                            const selectedType = this.value;
+                            
+                            if (selectedType === 'Weapon') {
+                                weaponFields.style.display = 'block';
+                                armorFields.style.display = 'none';
+                            } else if (selectedType === 'Armor') {
+                                weaponFields.style.display = 'none';
+                                armorFields.style.display = 'block';
+                            } else {
+                                weaponFields.style.display = 'none';
+                                armorFields.style.display = 'none';
+                            }
+                        });
+
+                        // Trigger initial state
+                        itemTypeSelect.dispatchEvent(new Event('change'));
+                    }
+                }
+            }
+            dynamicFieldsContainer.innerHTML = fieldTemplates[typeSelect.value] || '';
+
+            typeSelect.addEventListener('change', function() {
+                renderDynamicFields(this.value);
             });
 
             form.addEventListener('submit', async function (e) {
@@ -186,6 +248,31 @@
                     }
                 } catch (error) {
                     console.error('Error adding DND information:', error);
+                }
+            });
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const formData = new FormData(form);
+                
+                try {
+                    const response = await fetch('/add-dnd-info', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        alert(result.message || 'Item added successfully!');
+                        form.reset();
+                        dynamicFieldsContainer.innerHTML = '';
+                    } else {
+                        const error = await response.json();
+                        alert(error.error || 'Failed to add item');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred while adding the item');
                 }
             });
 
