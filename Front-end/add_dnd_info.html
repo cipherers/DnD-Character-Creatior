@@ -61,9 +61,9 @@
         <nav class="max-w-5xl mx-auto flex justify-between items-center">
             <h1 class="text-xl font-bold">DnD Character Creator</h1>
             <ul class="flex gap-4">
-                <li><a href="/index.html" class="hover:underline">Home</a></li>
-                <li><a href="/dashboard" class="hover:underline">Dashboard</a></li>
-                <li><a href="/gamer_manual.html" class="hover:underline">Player Manual</a></li>
+                <li><a href="{{ url_for('create_character') }}" class="hover:underline">Home</a></li>
+                <li><a href="{{ url_for('dashboard') }}" class="hover:underline">Dashboard</a></li>
+                <li><a href="{{ url_for('gamer_manual') }}" class="hover:underline">Player Manual</a></li>
             </ul>
         </nav>
     </header>

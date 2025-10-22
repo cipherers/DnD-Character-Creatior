@@ -520,6 +520,11 @@ def get_dnd_info():
 def add_dnd_info_page():
     return render_template('add_dnd_info.html')
 
+# --- Player Manual ---
+@app.route('/gamer_manual.html')
+def gamer_manual():
+    return render_template('gamer_manual.html')
+
 # --- Run the Application ---
 if __name__ == '__main__':
     # Run the seeding function before starting the server
