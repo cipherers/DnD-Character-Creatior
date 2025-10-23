@@ -429,6 +429,28 @@ def add_dnd_info():
     if not all([info_type, name, description]):
         return jsonify({'error': 'Missing required fields'}), 400
 
+    # Print debug information
+    print(f"Received info_type: {info_type}")
+    print(f"Received name: {name}")
+    print(f"Received description: {description}")
+        
+    # Check for existing items with the same name based on type
+    if info_type == 'race':
+        existing = Race.query.filter_by(name=name).first()
+    elif info_type == 'class':
+        existing = Class.query.filter_by(name=name).first()
+    elif info_type == 'ability':
+        existing = Skill.query.filter_by(name=name).first()
+    elif info_type == 'background':
+        existing = Background.query.filter_by(name=name).first()
+    elif info_type == 'equipment':
+        existing = Equipment.query.filter_by(name=name).first()
+    else:
+        return jsonify({'error': f'Invalid type: {info_type}. Must be one of: race, class, ability, background, equipment'}), 400
+        
+    if existing:
+        return jsonify({'error': f'{info_type.capitalize()} with name "{name}" already exists'}), 400
+
     if info_type == 'race':
         # Parse ability score bonuses
         strength_bonus = int(data.get('strength_bonus', 0))
@@ -456,6 +478,14 @@ def add_dnd_info():
         ability_type = data.get('ability_type')
         effect = data.get('effect')
         new_info = Skill(name=name, description=description, associated_attribute=ability_type)
+    elif info_type == 'background':
+        try:
+            existing = Background.query.filter_by(name=name).first()
+            if existing:
+                return jsonify({'error': f'Background with name "{name}" already exists'}), 400
+            new_info = Background(name=name, description=description)
+        except Exception as e:
+            return jsonify({'error': f'Failed to create background: {str(e)}'}), 400
     elif info_type == 'equipment':
         item_type = data.get('item_type')
         if item_type == 'Weapon':

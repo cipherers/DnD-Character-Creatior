@@ -72,11 +72,11 @@
         <form id="add-dnd-info-form" class="space-y-6">
             <div>
                 <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
-                                <select id="type" name="type" class="form-input">
+                                <select id="type" name="type" class="form-input" required>
                     <option value="">Select a type...</option>
                     <option value="race">Race</option>
                     <option value="class">Class</option>
-                    <option value="skill">Skill</option>
+                    <option value="ability">Ability</option>
                     <option value="equipment">Equipment</option>
                     <option value="background">Background</option>
                 </select>
@@ -140,7 +140,13 @@
                         <input type="number" name="hit_die" class="form-input" required>
                     </div>
                 `,
-                background: '',
+                background: `
+                    <!-- No additional fields needed for background, just name and description -->
+                    <div class="text-sm text-gray-600">
+                        <p>Backgrounds only require a name and description.</p>
+                        <p>Example description: "A scholar who has spent years studying in great libraries."</p>
+                    </div>
+                `,
                 skill: `
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Associated Attribute</label>
@@ -229,26 +235,6 @@
 
             typeSelect.addEventListener('change', function() {
                 renderDynamicFields(this.value);
-            });
-
-            form.addEventListener('submit', async function (e) {
-                e.preventDefault();
-                const formData = new FormData(form);
-                try {
-                    const response = await fetch('/add-dnd-info', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    if (response.ok) {
-                        alert('DND Information added successfully!');
-                        form.reset();
-                        renderDynamicFields(typeSelect.value);
-                    } else {
-                        alert('Failed to add DND Information.');
-                    }
-                } catch (error) {
-                    console.error('Error adding DND information:', error);
-                }
             });
 
             form.addEventListener('submit', async function(e) {
