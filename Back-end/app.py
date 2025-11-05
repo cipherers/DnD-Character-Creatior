@@ -220,6 +220,13 @@ def create_character():
     character_level = request.form.get('level', 1)
     alignment = request.form.get('alignment', 'Neutral')
     hp = request.form.get('hp', 10)
+    
+    # Get currency values from form
+    copper_pieces = request.form.get('copper_pieces', 0)
+    silver_pieces = request.form.get('silver_pieces', 0)
+    gold_pieces = request.form.get('gold_pieces', 0)
+    electrum_pieces = request.form.get('electrum_pieces', 0)
+    platinum_pieces = request.form.get('platinum_pieces', 0)
 
     selected_race = Race.query.get(race_id)
     selected_class = Class.query.get(character_class_id)
@@ -237,6 +244,16 @@ def create_character():
         flash('Invalid level or age.')
         return redirect(url_for('create_character'))
 
+    try:
+        copper = int(copper_pieces)
+        silver = int(silver_pieces)
+        gold = int(gold_pieces)
+        electrum = int(electrum_pieces)
+        platinum = int(platinum_pieces)
+    except ValueError:
+        flash('Invalid currency values.')
+        return redirect(url_for('create_character'))
+
     new_character = Character(
         name=character_name,
         age=age_val,
@@ -252,7 +269,12 @@ def create_character():
         character_class=selected_class,
         background=selected_background,
         user=user,
-        level=lvl
+        level=lvl,
+        copper_pieces=copper,
+        silver_pieces=silver,
+        gold_pieces=gold,
+        electrum_pieces=electrum,
+        platinum_pieces=platinum
     )
 
     if 'roll_scores' in request.form:
@@ -554,6 +576,42 @@ def add_dnd_info_page():
 @app.route('/gamer_manual.html')
 def gamer_manual():
     return render_template('gamer_manual.html')
+
+@app.route('/update-character-currency', methods=['POST'])
+def update_character_currency():
+    """Update a character's currency values."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+    
+    data = request.get_json()
+    character_id = data.get('character_id')
+    currency_type = data.get('currency_type')
+    value = data.get('value')
+
+    # Validate the currency type
+    if currency_type not in ['copper_pieces', 'silver_pieces', 'gold_pieces', 'electrum_pieces', 'platinum_pieces']:
+        return jsonify({'error': 'Invalid currency type'}), 400
+
+    try:
+        value = int(value)
+        if value < 0:
+            return jsonify({'error': 'Currency value cannot be negative'}), 400
+    except ValueError:
+        return jsonify({'error': 'Invalid currency value'}), 400
+
+    character = Character.query.get(character_id)
+    if not character:
+        return jsonify({'error': 'Character not found'}), 404
+
+    # Ensure the user owns this character
+    if character.user_id != session['user_id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    # Update the currency value
+    setattr(character, currency_type, value)
+    db.session.commit()
+
+    return jsonify({'message': 'Currency updated successfully'})
 
 # --- Run the Application ---
 if __name__ == '__main__':

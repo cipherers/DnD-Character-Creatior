@@ -77,7 +77,7 @@ class Character(db.Model):
     # Track last updated level for ability scores
     last_updated_level = db.Column(db.Integer, nullable=False, default=0)
 
-    def __init__(self, name, age, alignment, hp, strength, dexterity, constitution, intelligence, wisdom, charisma, race, character_class, level, background=None, user=None):
+    def __init__(self, name, age, alignment, hp, strength, dexterity, constitution, intelligence, wisdom, charisma, race, character_class, level, background=None, user=None, copper_pieces=0, silver_pieces=0, gold_pieces=0, electrum_pieces=0, platinum_pieces=0):
         self.name = name
         self.age = age
         self.level = level
@@ -93,6 +93,12 @@ class Character(db.Model):
         self.character_class = character_class # Assign the full Class object
         self.background = background
         self.user = user
+        # Initialize currency values
+        self.copper_pieces = copper_pieces
+        self.silver_pieces = silver_pieces
+        self.gold_pieces = gold_pieces
+        self.electrum_pieces = electrum_pieces
+        self.platinum_pieces = platinum_pieces
 
     def roll_ability_scores(self):
         """
