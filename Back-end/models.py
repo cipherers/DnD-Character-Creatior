@@ -33,6 +33,20 @@ character_equipment = db.Table(
     db.Column('equipment_id', db.Integer, db.ForeignKey('equipment.id'), primary_key=True)
 )
 
+# Linking table for Character <-> Spell
+character_spells = db.Table(
+    'character_spells',
+    db.Column('character_id', db.Integer, db.ForeignKey('characters.id'), primary_key=True),
+    db.Column('spell_id', db.Integer, db.ForeignKey('spells.id'), primary_key=True)
+)
+
+# Linking table for Character <-> Feat
+character_feats = db.Table(
+    'character_feats',
+    db.Column('character_id', db.Integer, db.ForeignKey('characters.id'), primary_key=True),
+    db.Column('feat_id', db.Integer, db.ForeignKey('feats.id'), primary_key=True)
+)
+
 class Character(db.Model):
     __tablename__ = 'characters'
     id = db.Column(db.Integer, primary_key=True)
@@ -71,8 +85,14 @@ class Character(db.Model):
     background = db.relationship('Background', backref='characters', lazy=True)
     
     # Many-to-many relationships
+    # Many-to-many relationships
     proficiencies = db.relationship('Skill', secondary=character_proficiencies, backref=db.backref('characters_with_skill'), lazy=True)
     inventory = db.relationship('Equipment', secondary=character_equipment, backref=db.backref('characters_with_equipment'), lazy=True)
+    spells = db.relationship('Spell', secondary=character_spells, backref=db.backref('characters_with_spell'), lazy=True)
+    feats = db.relationship('Feat', secondary=character_feats, backref=db.backref('characters_with_feat'), lazy=True)
+    
+    # Image path
+    image_path = db.Column(db.String, nullable=True)
 
     # Track last updated level for ability scores
     last_updated_level = db.Column(db.Integer, nullable=False, default=0)
@@ -136,6 +156,7 @@ class Race(db.Model):
     intelligence_bonus = db.Column(db.Integer, default=0, nullable=False)
     wisdom_bonus = db.Column(db.Integer, default=0, nullable=False)
     charisma_bonus = db.Column(db.Integer, default=0, nullable=False)
+    traits = db.relationship('Trait', backref='race', lazy=True)
 
 class Class(db.Model):
     __tablename__ = 'classes'
@@ -166,6 +187,32 @@ class Equipment(db.Model):
     damage_dice = db.Column(db.String, nullable=True)
     damage_type = db.Column(db.String, nullable=True)
     ac = db.Column(db.Integer, nullable=True)
+
+class Spell(db.Model):
+    __tablename__ = 'spells'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    level = db.Column(db.Integer, nullable=False)
+    school = db.Column(db.String, nullable=False)
+    casting_time = db.Column(db.String, nullable=False)
+    range_val = db.Column(db.String, nullable=False) # 'range' is a reserved keyword
+    components = db.Column(db.String, nullable=False)
+    duration = db.Column(db.String, nullable=False)
+    description = db.Column(db.Text, nullable=False)
+
+class Feat(db.Model):
+    __tablename__ = 'feats'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    prerequisites = db.Column(db.String, nullable=True)
+
+class Trait(db.Model):
+    __tablename__ = 'traits'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    race_id = db.Column(db.Integer, db.ForeignKey('races.id'), nullable=False)
 
 def seed_database():
     # ...existing code...

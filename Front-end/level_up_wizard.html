@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Level Up Wizard - {{ character.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl p-8">
+        <h1 class="text-3xl font-bold mb-6 text-center">Level Up: {{ character.name }}</h1>
+        <p class="text-center text-gray-500 mb-8">Advancing to Level {{ character.level + 1 }}</p>
+
+        <!-- Progress Steps -->
+        <div class="flex justify-between mb-8 border-b pb-4">
+            <div id="step-indicator-1" class="font-bold text-blue-600">1. HP</div>
+            <div id="step-indicator-2" class="text-gray-400">2. Features</div>
+            <div id="step-indicator-3" class="text-gray-400">3. Spells</div>
+            <div id="step-indicator-4" class="text-gray-400">4. Review</div>
+        </div>
+
+        <form id="level-up-form">
+            <input type="hidden" name="character_id" value="{{ character.id }}">
+            <input type="hidden" name="level" value="{{ character.level + 1 }}">
+
+            <!-- Step 1: HP -->
+            <div id="step-1" class="step-content">
+                <h2 class="text-xl font-semibold mb-4">Increase Hit Points</h2>
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-bold mb-2">New Max HP</label>
+                    <div class="flex items-center gap-4">
+                        <input type="number" name="hp"
+                            value="{{ character.hp + (character.character_class.hit_die // 2 + 1) }}"
+                            class="border rounded px-3 py-2 w-24">
+                        <span class="text-sm text-gray-500">(Suggested based on Class Hit Die)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Features (ASI / Feats) -->
+            <div id="step-2" class="step-content hidden">
+                <h2 class="text-xl font-semibold mb-4">Class Features & Feats</h2>
+                {% if (character.level + 1) % 4 == 0 %}
+                <div class="mb-4 bg-yellow-50 p-4 rounded border border-yellow-200">
+                    <h3 class="font-bold text-yellow-800">Ability Score Improvement</h3>
+                    <p class="text-sm text-yellow-700 mb-2">You reached a level divisible by 4! Choose an improvement.
+                    </p>
+                    <select name="ability_modification" id="ability-mod-select"
+                        class="border rounded px-3 py-2 w-full mb-2">
+                        <option value="">-- Select Bonus --</option>
+                        <option value="all_plus_one">All Stats +1</option>
+                        <option value="single_plus_two">One Stat +2</option>
+                        <option value="feat">Choose a Feat</option>
+                    </select>
+
+                    <div id="single-ability-choice" class="hidden mt-2">
+                        <label class="block text-sm">Select Stat:</label>
+                        <select name="selected_ability" class="border rounded px-3 py-2 w-full">
+                            <option value="strength">Strength</option>
+                            <option value="dexterity">Dexterity</option>
+                            <option value="constitution">Constitution</option>
+                            <option value="intelligence">Intelligence</option>
+                            <option value="wisdom">Wisdom</option>
+                            <option value="charisma">Charisma</option>
+                        </select>
+                    </div>
+
+                    <div id="feat-choice" class="hidden mt-2">
+                        <label class="block text-sm">Select Feat:</label>
+                        <select name="feats" id="feat-select" class="border rounded px-3 py-2 w-full">
+                            <!-- Populated by JS -->
+                        </select>
+                        <p id="feat-desc" class="text-sm text-gray-600 mt-1 italic"></p>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-gray-500">No major feature choices for this level.</p>
+                {% endif %}
+            </div>
+
+            <!-- Step 3: Spells -->
+            <div id="step-3" class="step-content hidden">
+                <h2 class="text-xl font-semibold mb-4">Learn New Spells</h2>
+                <p class="text-sm text-gray-500 mb-4">Select spells to add to your spellbook.</p>
+                <div class="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto" id="spells-list">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Step 4: Review -->
+            <div id="step-4" class="step-content hidden">
+                <h2 class="text-xl font-semibold mb-4">Review & Confirm</h2>
+                <div class="bg-gray-50 p-4 rounded text-sm space-y-2">
+                    <p><strong>New Level:</strong> {{ character.level + 1 }}</p>
+                    <!-- JS will populate summary here -->
+                    <div id="review-summary"></div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="flex justify-between mt-8">
+                <button type="button" id="prev-btn"
+                    class="px-4 py-2 rounded border bg-white hover:bg-gray-50 hidden">Previous</button>
+                <div class="flex gap-2 ml-auto">
+                    <a href="/dashboard" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</a>
+                    <button type="button" id="next-btn"
+                        class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Next</button>
+                    <button type="submit" id="submit-btn"
+                        class="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 hidden">Level Up!</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            let currentStep = 1;
+            const totalSteps = 4;
+
+            // Fetch data
+            const [featsRes, spellsRes] = await Promise.all([
+                fetch('/get-feats'),
+                fetch('/get-spells')
+            ]);
+            const feats = await featsRes.json();
+            const spells = await spellsRes.json();
+
+            // Check if character is a spellcaster
+            // We need the character's class name. It's rendered in the template, so let's pass it to JS.
+            const characterClass = "{{ character.character_class.name }}";
+            const spellcastingClasses = ["Wizard", "Sorcerer", "Cleric", "Warlock", "Bard", "Druid", "Paladin", "Ranger"];
+            const isSpellcaster = spellcastingClasses.some(c => characterClass.includes(c));
+
+            // Populate Feats
+            const featSelect = document.getElementById('feat-select');
+            const featDesc = document.getElementById('feat-desc');
+            if (featSelect) {
+                feats.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.id;
+                    opt.textContent = f.name;
+                    featSelect.appendChild(opt);
+                });
+                featSelect.addEventListener('change', () => {
+                    const feat = feats.find(f => f.id == featSelect.value);
+                    featDesc.textContent = feat ? feat.description : '';
+                });
+            }
+
+            // Populate Spells
+            if (isSpellcaster) {
+                const spellsList = document.getElementById('spells-list');
+                spells.forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = "flex items-start gap-2 p-2 border rounded hover:bg-gray-50";
+                    div.innerHTML = `
+                    <input type="checkbox" name="spells" value="${s.id}" id="spell-${s.id}">
+                    <div>
+                        <label for="spell-${s.id}" class="font-bold block">${s.name} (Lvl ${s.level})</label>
+                        <p class="text-xs text-gray-500">${s.description.substring(0, 60)}...</p>
+                    </div>
+                `;
+                    spellsList.appendChild(div);
+                });
+            } else {
+                // Hide the step indicator or mark it as N/A? 
+                // For simpler logic, we just skip the step, but visual feedback is good.
+                document.getElementById('step-indicator-3').classList.add('hidden');
+                // Also hide the step 3 content wrapper just in case
+                document.getElementById('step-3').innerHTML = '<p class="text-center text-gray-500 mt-10">Not a spellcasting class.</p>';
+            }
+
+            // UI Logic for Step 2
+            const abiSelect = document.getElementById('ability-mod-select');
+            if (abiSelect) {
+                abiSelect.addEventListener('change', () => {
+                    document.getElementById('single-ability-choice').classList.toggle('hidden', abiSelect.value !== 'single_plus_two');
+                    document.getElementById('feat-choice').classList.toggle('hidden', abiSelect.value !== 'feat');
+                });
+            }
+
+            // Navigation
+            const updateStep = () => {
+                document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
+                document.getElementById(`step-${currentStep}`).classList.remove('hidden');
+
+                document.getElementById('prev-btn').classList.toggle('hidden', currentStep === 1);
+                document.getElementById('next-btn').classList.toggle('hidden', currentStep === totalSteps);
+                document.getElementById('submit-btn').classList.toggle('hidden', currentStep !== totalSteps);
+
+                // Update indicators
+                for (let i = 1; i <= totalSteps; i++) {
+                    const el = document.getElementById(`step-indicator-${i}`);
+                    el.className = i === currentStep ? "font-bold text-blue-600" : "text-gray-400";
+                }
+            };
+
+            document.getElementById('next-btn').addEventListener('click', () => {
+                if (currentStep < totalSteps) {
+                    currentStep++;
+                    // Skip Spells step if not a spellcaster
+                    if (!isSpellcaster && currentStep === 3) {
+                        currentStep++;
+                    }
+                    updateStep();
+                }
+            });
+
+            document.getElementById('prev-btn').addEventListener('click', () => {
+                if (currentStep > 1) {
+                    currentStep--;
+                    // Skip Spells step if not a spellcaster
+                    if (!isSpellcaster && currentStep === 3) {
+                        currentStep--;
+                    }
+                    updateStep();
+                }
+            });
+
+            document.getElementById('level-up-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                try {
+                    const res = await fetch('/update-character', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (res.ok) {
+                        alert("Level up successful!");
+                        window.location.href = '/dashboard';
+                    } else {
+                        alert("Error leveling up.");
+                    }
+                } catch (arr) {
+                    console.error(arr);
+                    alert("Network error.");
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
