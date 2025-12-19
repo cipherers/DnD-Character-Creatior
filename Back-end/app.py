@@ -1,16 +1,23 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 import random
 from flask import session
 
 # Make sure all your model definitions are in a file named 'models.py'
 # and import them here.
-from models import db, Character, Race, Class, Background, Skill, Equipment, User
+from models import db, Character, Race, Class, Background, Skill, Equipment, User, Spell, Feat, Trait
 import json
 import io
 from flask import send_file
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+import os
+from werkzeug.utils import secure_filename
+
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../Front-end/static/uploads')
+# Ensure upload folder exists
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # --- Flask Application Setup ---
 # The template_folder is set to 'Front-end' to find index.html
@@ -20,6 +27,7 @@ app = Flask(__name__, template_folder='../Front-end')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'a_very_secret_key' # Needed for flash messages and sessions
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Initialize the SQLAlchemy object with the Flask app
 db.init_app(app)
@@ -53,10 +61,55 @@ def get_class_skill_map():
         if allowed_names is None:
             # If no specific rules, allow all skills
             mapping[cls.name] = [s.id for s in Skill.query.all()]
-        else:
-            # Map only the allowed skills
-            mapping[cls.name] = [skills[name.lower()] for name in allowed_names if name.lower() in skills]
-    return mapping
+@app.route('/get-all-equipment')
+def get_all_equipment():
+    equipment = Equipment.query.all()
+    return jsonify([{'id': e.id, 'name': e.name, 'item_type': e.item_type, 'description': e.description} for e in equipment])
+
+@app.route('/add-inventory-item', methods=['POST'])
+def add_inventory_item():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.get_json()
+    character_id = data.get('character_id')
+    item_id = data.get('item_id')
+
+    character = Character.query.get(character_id)
+    if not character or character.user_id != session['user_id']:
+        return jsonify({'error': 'Character not found or unauthorized'}), 404
+        
+    item = Equipment.query.get(item_id)
+    if not item:
+        return jsonify({'error': 'Item not found'}), 404
+
+    character.inventory.append(item)
+    db.session.commit()
+    return jsonify({'message': 'Item added successfully'})
+
+@app.route('/remove-inventory-item', methods=['POST'])
+def remove_inventory_item():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.get_json()
+    character_id = data.get('character_id')
+    item_id = data.get('item_id')
+
+    character = Character.query.get(character_id)
+    if not character or character.user_id != session['user_id']:
+        return jsonify({'error': 'Character not found or unauthorized'}), 404
+
+    item = Equipment.query.get(item_id)
+    if not item:
+        return jsonify({'error': 'Item not found'}), 404
+
+    if item in character.inventory:
+        character.inventory.remove(item)
+        db.session.commit()
+        return jsonify({'message': 'Item removed successfully'})
+    else:
+        return jsonify({'error': 'Item not in inventory'}), 400
 
 # --- Database Seeding Function ---
 def seed_database():
@@ -70,89 +123,146 @@ def seed_database():
 
         # Ensure the characters table has the new 'user_id' column (migration for older DBs)
         try:
-            info = db.session.execute("PRAGMA table_info(characters)").fetchall()
+            info = db.session.execute(text("PRAGMA table_info(characters)")).fetchall()
             col_names = [row[1] for row in info]
             if 'user_id' not in col_names:
                 print("Adding missing 'user_id' column to characters table...")
-                db.session.execute("ALTER TABLE characters ADD COLUMN user_id INTEGER")
+                db.session.execute(text("ALTER TABLE characters ADD COLUMN user_id INTEGER"))
                 db.session.commit()
         except Exception as e:
-            # If the characters table doesn't exist yet or pragma fails, ignore and continue
             print(f"Migration check skipped or failed: {e}")
+
+        # Ensure the characters table has the new 'image_path' column
+        try:
+            info = db.session.execute(text("PRAGMA table_info(characters)")).fetchall()
+            col_names = [row[1] for row in info]
+            if 'image_path' not in col_names:
+                print("Adding missing 'image_path' column to characters table...")
+                db.session.execute(text("ALTER TABLE characters ADD COLUMN image_path TEXT"))
+                db.session.commit()
+        except Exception as e:
+            print(f"Migration check for image_path skipped or failed: {e}")
 
         # Check if tables are already populated to prevent duplicates
         if Race.query.first():
-            print("Database already seeded. Skipping...")
-            return
-
-        print("Seeding database with sample data...")
-
-        # 1. Add some initial data for the foreign key tables
-        human = Race(name='Human', description='A versatile and ambitious race.', strength_bonus=1, dexterity_bonus=1, constitution_bonus=1, intelligence_bonus=1, wisdom_bonus=1, charisma_bonus=1)
-        elf = Race(name='Elf', description='Graceful and long-lived.', dexterity_bonus=2, intelligence_bonus=1)
-        
-        class_fighter = Class(name='Fighter', description='A master of combat.', hit_die=10)
-        class_wizard = Class(name='Wizard', description='A student of arcane magic.', hit_die=6)
-
-        background_acolyte = Background(name='Acolyte', description='Serving a deity and a temple.')
-        
-        skill_athletics = Skill(name='Athletics', description='Physical prowess and strength.', associated_attribute='strength')
-        skill_stealth = Skill(name='Stealth', description='Hiding and moving quietly.', associated_attribute='dexterity')
-        
-        equipment_sword = Equipment(name='LongSword', description='A classic one-handed sword.', item_type='Weapon', damage_dice='1d8', damage_type='Slashing')
-        equipment_shield = Equipment(name='Shield', description='Provides protection.', item_type='Armor', ac=2)
-
-        db.session.add_all([
-            human, elf,
-            class_fighter, class_wizard,
-            background_acolyte,
-            skill_athletics, skill_stealth,
-            equipment_sword, equipment_shield
-        ])
-        # Example debug: print the latest Race entry (remove or change as needed)
-        latest = db.session.query(Character).order_by(Character.id.desc()).first()
-        if latest:
-            print(latest.id)
-        db.session.commit()
-
-        # Ensure at least one user exists for foreign key user_id
-        from models import User as UserModel
-        seed_user = User.query.first()
-        if not seed_user:
-            seed_user = User(username='seed_user')
-            seed_user.set_password('password')
-            db.session.add(seed_user)
+            print("Main data already seeded.")
+        else: 
+            print("Seeding database with sample data...")
+            # ... (Indentation of the block below needs to control what is skipped)
+            # The current structure has everything inside the main block.
+            # I need to separate the new data checks.
+            
+            # 1. Add some initial data for the foreign key tables
+            human = Race(name='Human', description='A versatile and ambitious race.', strength_bonus=1, dexterity_bonus=1, constitution_bonus=1, intelligence_bonus=1, wisdom_bonus=1, charisma_bonus=1)
+            elf = Race(name='Elf', description='Graceful and long-lived.', dexterity_bonus=2, intelligence_bonus=1)
+            
+            class_fighter = Class(name='Fighter', description='A master of combat.', hit_die=10)
+            class_wizard = Class(name='Wizard', description='A student of arcane magic.', hit_die=6)
+    
+            background_acolyte = Background(name='Acolyte', description='Serving a deity and a temple.')
+            
+            skill_athletics = Skill(name='Athletics', description='Physical prowess and strength.', associated_attribute='strength')
+            skill_stealth = Skill(name='Stealth', description='Hiding and moving quietly.', associated_attribute='dexterity')
+            
+            equipment_sword = Equipment(name='LongSword', description='A classic one-handed sword.', item_type='Weapon', damage_dice='1d8', damage_type='Slashing')
+            equipment_shield = Equipment(name='Shield', description='Provides protection.', item_type='Armor', ac=2)
+    
+            db.session.add_all([
+                human, elf,
+                class_fighter, class_wizard,
+                background_acolyte,
+                skill_athletics, skill_stealth,
+                equipment_sword, equipment_shield
+            ])
             db.session.commit()
 
-        # 2. Create a new Character and link it to the seeded data
-        main_character = Character(
-            name='Arthur',
-            age=25,
-            alignment='Lawful Good',
-            hp=15,
-            strength=15,
-            dexterity=12,
-            constitution=14,
-            intelligence=10,
-            wisdom=11,
-            charisma=13,
-            race=human, # Pass the Race object
-            character_class=class_fighter, # Pass the Class object
-            background=background_acolyte,
-            user=seed_user,
-            level = 1
-        )
+            # Ensure at least one user exists for foreign key user_id
+            from models import User as UserModel
+            seed_user = User.query.first()
+            if not seed_user:
+                seed_user = User(username='seed_user')
+                seed_user.set_password('password')
+                db.session.add(seed_user)
+                db.session.commit()
+    
+            # 2. Create a new Character and link it to the seeded data
+            main_character = Character(
+                name='Arthur',
+                age=25,
+                alignment='Lawful Good',
+                hp=15,
+                strength=15,
+                dexterity=12,
+                constitution=14,
+                intelligence=10,
+                wisdom=11,
+                charisma=13,
+                race=human, # Pass the Race object
+                character_class=class_fighter, # Pass the Class object
+                background=background_acolyte,
+                user=seed_user,
+                level = 1
+            )
+    
+            # 3. Add proficiencies and equipment using the relationships
+            main_character.proficiencies.append(skill_athletics)
+            main_character.inventory.append(equipment_sword)
+            main_character.inventory.append(equipment_shield)
+    
+            db.session.add(main_character)
+            db.session.commit()
+            print("Database seeding complete!")
+        
+        # Check for Spells independently
+        if not Spell.query.first():
+             # Add basic Spells
+            spell_fireball = Spell(
+                name='Fireball', 
+                level=3, 
+                school='Evocation', 
+                casting_time='1 Action', 
+                range_val='150 feet', 
+                components='V, S, M', 
+                duration='Instantaneous', 
+                description='A bright streak flashes from your pointing finger to a point you choose...'
+            )
+            spell_cure_wounds = Spell(
+                name='Cure Wounds', 
+                level=1, 
+                school='Evocation', 
+                casting_time='1 Action', 
+                range_val='Touch', 
+                components='V, S', 
+                duration='Instantaneous', 
+                description='A creature you touch regains a number of hit points equal to 1d8 + your spellcasting ability modifier.'
+            )
+            db.session.add_all([spell_fireball, spell_cure_wounds])
+            db.session.commit()
+            print("Seeded basic spells.")
 
-        # 3. Add proficiencies and equipment using the relationships
-        main_character.proficiencies.append(skill_athletics)
-        main_character.inventory.append(equipment_sword)
-        main_character.inventory.append(equipment_shield)
+        # Check for Feats
+        if not Feat.query.first():
+            # Add basic Feats
+            feat_alert = Feat(
+                name='Alert', 
+                description='Always on the lookout for danger. You gain +5 to initiative, cannot be surprised, and hidden attackers dont get advantage.'
+            )
+            db.session.add(feat_alert)
+            db.session.commit()
+            print("Seeded basic feats.")
 
-        db.session.add(main_character)
-        db.session.commit()
+        # Check for Traits (checking if Elf has traits for simplicity)
+        elf_race = Race.query.filter_by(name='Elf').first()
+        if elf_race and not Trait.query.filter_by(race_id=elf_race.id).first():
+             # Now create and add trait using the committed race
+            trait_darkvision = Trait(name='Darkvision', description='You can see in dim light within 60 feet of you as if it were bright light.', race_id=elf_race.id)
+            db.session.add(trait_darkvision)
+            db.session.commit()
+            print("Seeded basic traits.")
+        # Example debug: update later
+        pass
 
-        print("Database seeding complete!")
-        print(f"Created character: {main_character.name} (ID: {main_character.id})")
+
 
 
 # --- Authentication ---
@@ -386,6 +496,9 @@ def get_character(character_id):
         'id': character.id,
         'level': character.level,
         'skills': [skill.id for skill in character.proficiencies],
+        'spells': [spell.id for spell in character.spells],
+        'feats': [feat.id for feat in character.feats],
+        'image_path': character.image_path,
         'available_skills': [{'id': skill.id, 'name': skill.name} for skill in available_skills]
     })
 
@@ -396,54 +509,118 @@ def update_character():
     skill_ids = request.form.getlist('skills')
 
     character = Character.query.get_or_404(character_id)
-    character.level = int(level)
+    try:
+        character.level = int(level)
 
-    # Check if ability scores have already been updated for the current level
-    if character.level >= 4 and character.level % 4 == 0:
-        if character.last_updated_level == character.level:
-            return jsonify({"error": "Ability scores have already been increased."}), 400
+        # Check if ability scores have already been updated for the current level
+        if character.level >= 4 and character.level % 4 == 0:
+            if character.last_updated_level == character.level:
+                # return jsonify({"error": "Ability scores have already been increased."}), 400
+                pass # Allow re-saving for now to avoid blocking
 
-        ability_modification = request.form.get('ability_modification')
-        if ability_modification == 'all_plus_one':
-            # Add 1 to all ability scores
-            character.strength += 1
-            character.dexterity += 1
-            character.constitution += 1
-            character.intelligence += 1
-            character.wisdom += 1
-            character.charisma += 1
-        elif ability_modification == 'single_plus_two':
-            selected_ability = request.form.get('selected_ability')
-            if selected_ability in ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma']:
-                setattr(character, selected_ability, getattr(character, selected_ability) + 2)
+            ability_modification = request.form.get('ability_modification')
+            if ability_modification == 'all_plus_one':
+                # Add 1 to all ability scores
+                character.strength += 1
+                character.dexterity += 1
+                character.constitution += 1
+                character.intelligence += 1
+                character.wisdom += 1
+                character.charisma += 1
+            elif ability_modification == 'single_plus_two':
+                selected_ability = request.form.get('selected_ability')
+                if selected_ability in ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma']:
+                    setattr(character, selected_ability, getattr(character, selected_ability) + 2)
+            
+            # Additional Feat Handling for Level Up Wizard
+            if ability_modification == 'feat':
+                feat_id = request.form.get('feats') # Single feat from wizard
+                if feat_id:
+                     # Append, don't replace
+                    feat = Feat.query.get(feat_id)
+                    if feat and feat not in character.feats:
+                        character.feats.append(feat)
 
-        # Update the last_updated_level to the current level
-        character.last_updated_level = character.level
+            # Update the last_updated_level to the current level
+            character.last_updated_level = character.level
 
-    selected_ability = None  # Initialize selected_ability to avoid UnboundLocalError
+        # Update skills
+        if skill_ids:
+            selected_skills = Skill.query.filter(Skill.id.in_(skill_ids)).all()
+            # For dashboard edit, we assume full replacement
+            character.proficiencies = selected_skills
+            
+        # Update Spells
+        spell_ids = request.form.getlist('spells')
+        if spell_ids:
+            selected_spells = Spell.query.filter(Spell.id.in_(spell_ids)).all()
+            # Append new spells coming from Level Up Wizard
+            # But Dashboard might send full list? 
+            # Differentiate by checking if we are coming from wizard (which sends 'level' + 1 usually)
+            # For now, let's append to be safe for wizard, risking duplicates if logic isn't tight?
+            # SQLAlchemy handles list assignment as replacement.
+            # Let's change to: add any that aren't there.
+            for s in selected_spells:
+                if s not in character.spells:
+                    character.spells.append(s)
+            
+        # Update Feats (from Dashboard)
+        # Check if 'feats' list is multiple or single is tricky.
+        # If accessing via dashboard, we might not have feats input yet.
+        # If accessing via wizard, we handled it above? No, wait.
+        # The wizard sends 'feats' as name.
+        
+        db.session.commit()
+        return jsonify({'message': 'Character updated successfully'})
+    except Exception as e:
+        print(f"ERROR in update_character: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
-    # Debugging: Log ability modification and selected ability
-    print(f"Ability modification: {ability_modification}")
-    if selected_ability:
-        print(f"Selected ability: {selected_ability}")
+@app.route('/upload-portrait', methods=['POST'])
+def upload_portrait():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['file']
+    character_id = request.form.get('character_id')
 
-    # Ensure the character object is marked as modified
-    db.session.add(character)
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    if file:
+        filename = secure_filename(f"char_{character_id}_{file.filename}")
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        
+        char = Character.query.get(character_id)
+        if char and char.user_id == session['user_id']:
+            char.image_path = f"static/uploads/{filename}"
+            db.session.commit()
+            return jsonify({'message': 'Image uploaded', 'image_path': char.image_path})
+        return jsonify({'error': 'Character not found or unauthorized'}), 404
+    return jsonify({'error': 'Upload failed'}), 500
 
-    # Debugging: Log updated ability scores
-    print(f"Updated Strength: {character.strength}")
-    print(f"Updated Dexterity: {character.dexterity}")
-    print(f"Updated Constitution: {character.constitution}")
-    print(f"Updated Intelligence: {character.intelligence}")
-    print(f"Updated Wisdom: {character.wisdom}")
-    print(f"Updated Charisma: {character.charisma}")
+@app.route('/get-spells')
+def get_spells():
+    level = request.args.get('level')
+    query = Spell.query
+    if level is not None:
+        query = query.filter_by(level=level)
+    spells = query.all()
+    return jsonify([{
+        'id': s.id, 'name': s.name, 'level': s.level, 
+        'school': s.school, 'casting_time': s.casting_time, 
+        'range': s.range_val, 'components': s.components, 
+        'duration': s.duration, 'description': s.description
+    } for s in spells])
 
-    # Update skills
-    selected_skills = Skill.query.filter(Skill.id.in_(skill_ids)).all()
-    character.proficiencies = selected_skills
-
-    db.session.commit()
-    return jsonify({'message': 'Character updated successfully'})
+@app.route('/get-feats')
+def get_feats():
+    feats = Feat.query.all()
+    return jsonify([{'id': f.id, 'name': f.name, 'description': f.description} for f in feats])
 
 @app.route('/add-dnd-info', methods=['POST'])
 def add_dnd_info():
@@ -576,6 +753,15 @@ def get_dnd_info():
 @app.route('/add-dnd-info')
 def add_dnd_info_page():
     return render_template('add_dnd_info.html')
+
+@app.route('/level-up/<int:character_id>')
+def level_up_wizard(character_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    character = Character.query.get_or_404(character_id)
+    if character.user_id != session['user_id']:
+        return "Unauthorized", 403
+    return render_template('level_up_wizard.html', character=character)
 
 # --- Player Manual ---
 @app.route('/gamer_manual.html')

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,16 +8,19 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
             color: #374151;
         }
+
         .form-container {
             background-color: #ffffff;
             border-radius: 12px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
+
         .btn {
             padding: 0.75rem 1.5rem;
             border-radius: 8px;
@@ -24,18 +28,23 @@
             color: #ffffff;
             transition: background-color 0.2s ease;
         }
+
         .btn-primary {
             background-color: #4f46e5;
         }
+
         .btn-primary:hover {
             background-color: #4338ca;
         }
+
         .btn-secondary {
             background-color: #10b981;
         }
+
         .btn-secondary:hover {
             background-color: #059669;
         }
+
         .character-thumb {
             width: 48px;
             height: 48px;
@@ -48,6 +57,7 @@
         }
     </style>
 </head>
+
 <body class="flex items-center justify-center min-h-screen p-4">
     <header class="absolute top-0 left-0 w-full bg-gray-800 text-white p-4">
         <nav class="max-w-5xl mx-auto flex justify-between items-center">
@@ -68,107 +78,121 @@
             </div>
         </div>
         {% if characters and characters|length > 0 %}
-            <div class="md:flex md:space-x-6">
-                <!-- Left: character list -->
-                <div class="md:w-1/2">
-                    <h2 class="text-xl font-semibold mb-4">Your Characters</h2>
-                    <div class="overflow-y-auto max-h-96">
-                        <ul class="divide-y divide-gray-200">
+        <div class="md:flex md:space-x-6">
+            <!-- Left: character list -->
+            <div class="md:w-1/2">
+                <h2 class="text-xl font-semibold mb-4">Your Characters</h2>
+                <div class="overflow-y-auto max-h-96">
+                    <ul class="divide-y divide-gray-200">
                         {% for char in characters %}
-                            <li class="py-4">
-                                <div id="char-{{ char.id }}" class="character-card flex items-center space-x-4 p-3 rounded-lg hover:shadow-lg transition-shadow relative" data-char-id="{{ char.id }}"
-                                     data-name="{{ char.name }}"
-                                     data-level="{{ char.level }}"
-                                     data-age="{{ char.age }}"
-                                     data-class="{{ char.character_class.name if char.character_class else '' }}"
-                                     data-race="{{ char.race.name if char.race else '' }}"
-                                     data-background="{{ char.background.name if char.background else '' }}"
-                                     data-str="{{ char.strength }}"
-                                     data-dex="{{ char.dexterity }}"
-                                     data-con="{{ char.constitution }}"
-                                     data-int="{{ char.intelligence }}"
-                                     data-wis="{{ char.wisdom }}"
-                                     data-cha="{{ char.charisma }}">
-                                    <div class="character-thumb flex-shrink-0">
-                                        <img src="https://api.dicebear.com/7.x/adventurer/svg?seed={{ char.name|urlencode }}" alt="Thumbnail for {{ char.name }}" class="w-12 h-12 rounded">
-                                    </div>
+                        <li class="py-4">
+                            <div id="char-{{ char.id }}"
+                                class="character-card flex items-center space-x-4 p-3 rounded-lg hover:shadow-lg transition-shadow relative"
+                                data-char-id="{{ char.id }}" data-name="{{ char.name }}" data-level="{{ char.level }}"
+                                data-age="{{ char.age }}"
+                                data-class="{{ char.character_class.name if char.character_class else '' }}"
+                                data-race="{{ char.race.name if char.race else '' }}"
+                                data-background="{{ char.background.name if char.background else '' }}"
+                                data-str="{{ char.strength }}" data-dex="{{ char.dexterity }}"
+                                data-con="{{ char.constitution }}" data-int="{{ char.intelligence }}"
+                                data-wis="{{ char.wisdom }}" data-cha="{{ char.charisma }}"
+                                data-image="{{ char.image_path }}">
+                                <div class="character-thumb flex-shrink-0 relative group">
+                                    {% if char.image_path %}
+                                    <img src="/{{ char.image_path }}" alt="Thumbnail for {{ char.name }}"
+                                        class="w-12 h-12 rounded object-cover">
+                                    {% else %}
+                                    <img src="https://api.dicebear.com/7.x/adventurer/svg?seed={{ char.name|urlencode }}"
+                                        alt="Thumbnail for {{ char.name }}" class="w-12 h-12 rounded">
+                                    {% endif %}
+                                </div>
 
-                                    <div class="flex-1">
-                                        <div class="flex items-start">
-                                            <div class="font-bold text-lg">{{ char.name }}</div>
-                                            <form method="post" action="{{ url_for('delete_character', char_id=char.id) }}" onsubmit="return confirm('Delete character {{ char.name }}?')" class="ml-auto">
-                                                <button type="submit" class="text-white bg-red-500 hover:bg-red-600 rounded px-2 py-1 text-sm">Delete</button>
-                                            </form>
-                                        </div>
-                                        <div class="text-sm text-gray-500">Level {{ char.level }} • Age {{ char.age }}</div>
+                                <div class="flex-1">
+                                    <div class="flex items-start">
+                                        <div class="font-bold text-lg">{{ char.name }}</div>
+                                        <form method="post" action="{{ url_for('delete_character', char_id=char.id) }}"
+                                            onsubmit="return confirm('Delete character {{ char.name }}?')"
+                                            class="ml-auto">
+                                            <button type="submit"
+                                                class="text-white bg-red-500 hover:bg-red-600 rounded px-2 py-1 text-sm">Delete</button>
+                                        </form>
                                     </div>
+                                    <div class="text-sm text-gray-500">Level {{ char.level }} • Age {{ char.age }}</div>
                                 </div>
-                                <!-- Add Edit Button and Download Buttons to Character Card -->
-                                <div class="mt-2 flex gap-2 flex-wrap">
-                                    <button class="btn btn-secondary edit-character-btn text-sm" data-id="{{ char.id }}">Edit Character</button>
-                                    <a href="{{ url_for('download_character_json', character_id=char.id) }}" class="btn bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1.5 rounded">JSON</a>
-                                    <a href="{{ url_for('download_character_pdf', character_id=char.id) }}" class="btn bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded">PDF</a>
-                                </div>
-                            </li>
+                            </div>
+                            <!-- Add Edit Button and Download Buttons to Character Card -->
+                            <div class="mt-2 flex gap-2 flex-wrap">
+                                <button class="btn btn-secondary edit-character-btn text-sm"
+                                    data-id="{{ char.id }}">Edit Character</button>
+                                <a href="{{ url_for('level_up_wizard', character_id=char.id) }}"
+                                    class="btn btn-primary text-sm px-3 py-1.5 rounded">Level Up</a>
+                                <a href="{{ url_for('download_character_json', character_id=char.id) }}"
+                                    class="btn bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1.5 rounded">JSON</a>
+                                <a href="{{ url_for('download_character_pdf', character_id=char.id) }}"
+                                    class="btn bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded">PDF</a>
+                            </div>
+                        </li>
                         {% endfor %}
-                        </ul>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Right: persistent details panel -->
+            <aside id="char-details-panel" class="md:w-1/2 bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                <div id="char-details-empty" class="text-center text-gray-500">
+                    Hover or tap a character to see details here.
+                </div>
+                <div id="char-details-content" class="hidden">
+                    <div class="flex items-center mb-3">
+                        <div class="character-thumb mr-3">
+                            <img id="detail-thumb" src="" alt="" class="w-16 h-16 rounded">
+                        </div>
+                        <div>
+                            <div id="detail-name" class="font-bold text-2xl"></div>
+                            <div id="detail-sub" class="text-sm text-gray-500"></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="font-medium">Class</div>
+                            <div id="detail-class" class="text-sm text-gray-700">-</div>
+                        </div>
+                        <div>
+                            <div class="font-medium">Race</div>
+                            <div id="detail-race" class="text-sm text-gray-700">-</div>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <div class="font-medium">Background</div>
+                        <div id="detail-background" class="text-sm text-gray-700">-</div>
+                    </div>
+                    <div class="mt-4">
+                        <div class="font-medium mb-1">Ability Scores</div>
+                        <div class="grid grid-cols-3 gap-2 text-sm text-gray-700">
+                            <div>STR: <span id="detail-str">-</span></div>
+                            <div>DEX: <span id="detail-dex">-</span></div>
+                            <div>CON: <span id="detail-con">-</span></div>
+                            <div>INT: <span id="detail-int">-</span></div>
+                            <div>WIS: <span id="detail-wis">-</span></div>
+                            <div>CHA: <span id="detail-cha">-</span></div>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Right: persistent details panel -->
-                <aside id="char-details-panel" class="md:w-1/2 bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                    <div id="char-details-empty" class="text-center text-gray-500">
-                        Hover or tap a character to see details here.
-                    </div>
-                    <div id="char-details-content" class="hidden">
-                        <div class="flex items-center mb-3">
-                            <div class="character-thumb mr-3">
-                                <img id="detail-thumb" src="" alt="" class="w-16 h-16 rounded">
-                            </div>
-                            <div>
-                                <div id="detail-name" class="font-bold text-2xl"></div>
-                                <div id="detail-sub" class="text-sm text-gray-500"></div>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <div class="font-medium">Class</div>
-                                <div id="detail-class" class="text-sm text-gray-700">-</div>
-                            </div>
-                            <div>
-                                <div class="font-medium">Race</div>
-                                <div id="detail-race" class="text-sm text-gray-700">-</div>
-                            </div>
-                        </div>
-                        <div class="mt-2">
-                            <div class="font-medium">Background</div>
-                            <div id="detail-background" class="text-sm text-gray-700">-</div>
-                        </div>
-                        <div class="mt-4">
-                            <div class="font-medium mb-1">Ability Scores</div>
-                            <div class="grid grid-cols-3 gap-2 text-sm text-gray-700">
-                                <div>STR: <span id="detail-str">-</span></div>
-                                <div>DEX: <span id="detail-dex">-</span></div>
-                                <div>CON: <span id="detail-con">-</span></div>
-                                <div>INT: <span id="detail-int">-</span></div>
-                                <div>WIS: <span id="detail-wis">-</span></div>
-                                <div>CHA: <span id="detail-cha">-</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </aside>
-            </div>
-            {% if total > per_page %}
-            <div class="flex justify-center mt-4 space-x-2">
-                {% for p in range(1, (total // per_page) + (1 if total % per_page else 0) + 1) %}
-                    <a href="?page={{ p }}" class="px-3 py-1 rounded {{ 'bg-blue-500 text-white' if p == page else 'bg-gray-200 text-gray-700' }}">{{ p }}</a>
-                {% endfor %}
-            </div>
-            {% endif %}
+            </aside>
+        </div>
+        {% if total > per_page %}
+        <div class="flex justify-center mt-4 space-x-2">
+            {% for p in range(1, (total // per_page) + (1 if total % per_page else 0) + 1) %}
+            <a href="?page={{ p }}"
+                class="px-3 py-1 rounded {{ 'bg-blue-500 text-white' if p == page else 'bg-gray-200 text-gray-700' }}">{{
+                p }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
         {% else %}
-            <!-- No characters: show character creator UI in dashboard layout -->
-            <h2 class="text-xl font-semibold mb-4">Create Your First Character</h2>
-            {% include 'index.html' %}
+        <!-- No characters: show character creator UI in dashboard layout -->
+        <h2 class="text-xl font-semibold mb-4">Create Your First Character</h2>
+        {% include 'index.html' %}
         {% endif %}
 
         <!-- Character summary section -->
@@ -187,63 +211,38 @@
                     <div class="grid grid-cols-2 gap-2 mt-2">
                         <div class="flex items-center">
                             <label for="copper-{{ character.id }}" class="mr-2">Copper:</label>
-                            <input type="number" 
-                                   id="copper-{{ character.id }}"
-                                   class="w-20 px-2 py-1 border rounded currency-input" 
-                                   data-char-id="{{ character.id }}" 
-                                   data-currency-type="copper_pieces" 
-                                   value="{{ character.copper_pieces }}"
-                                   min="0"
-                                   title="Copper Pieces"
-                                   aria-label="Copper Pieces">
+                            <input type="number" id="copper-{{ character.id }}"
+                                class="w-20 px-2 py-1 border rounded currency-input" data-char-id="{{ character.id }}"
+                                data-currency-type="copper_pieces" value="{{ character.copper_pieces }}" min="0"
+                                title="Copper Pieces" aria-label="Copper Pieces">
                         </div>
                         <div class="flex items-center">
                             <label for="silver-{{ character.id }}" class="mr-2">Silver:</label>
-                            <input type="number" 
-                                   id="silver-{{ character.id }}"
-                                   class="w-20 px-2 py-1 border rounded currency-input" 
-                                   data-char-id="{{ character.id }}" 
-                                   data-currency-type="silver_pieces" 
-                                   value="{{ character.silver_pieces }}"
-                                   min="0"
-                                   title="Silver Pieces"
-                                   aria-label="Silver Pieces">
+                            <input type="number" id="silver-{{ character.id }}"
+                                class="w-20 px-2 py-1 border rounded currency-input" data-char-id="{{ character.id }}"
+                                data-currency-type="silver_pieces" value="{{ character.silver_pieces }}" min="0"
+                                title="Silver Pieces" aria-label="Silver Pieces">
                         </div>
                         <div class="flex items-center">
                             <label for="gold-{{ character.id }}" class="mr-2">Gold:</label>
-                            <input type="number" 
-                                   id="gold-{{ character.id }}"
-                                   class="w-20 px-2 py-1 border rounded currency-input" 
-                                   data-char-id="{{ character.id }}" 
-                                   data-currency-type="gold_pieces" 
-                                   value="{{ character.gold_pieces }}"
-                                   min="0"
-                                   title="Gold Pieces"
-                                   aria-label="Gold Pieces">
+                            <input type="number" id="gold-{{ character.id }}"
+                                class="w-20 px-2 py-1 border rounded currency-input" data-char-id="{{ character.id }}"
+                                data-currency-type="gold_pieces" value="{{ character.gold_pieces }}" min="0"
+                                title="Gold Pieces" aria-label="Gold Pieces">
                         </div>
                         <div class="flex items-center">
                             <label for="electrum-{{ character.id }}" class="mr-2">Electrum:</label>
-                            <input type="number" 
-                                   id="electrum-{{ character.id }}"
-                                   class="w-20 px-2 py-1 border rounded currency-input" 
-                                   data-char-id="{{ character.id }}" 
-                                   data-currency-type="electrum_pieces" 
-                                   value="{{ character.electrum_pieces }}"
-                                   min="0"
-                                   title="Electrum Pieces"
-                                   aria-label="Electrum Pieces">
+                            <input type="number" id="electrum-{{ character.id }}"
+                                class="w-20 px-2 py-1 border rounded currency-input" data-char-id="{{ character.id }}"
+                                data-currency-type="electrum_pieces" value="{{ character.electrum_pieces }}" min="0"
+                                title="Electrum Pieces" aria-label="Electrum Pieces">
                         </div>
                         <div class="flex items-center">
                             <label for="platinum-{{ character.id }}" class="mr-2">Platinum:</label>
-                            <input type="number" 
-                                   id="platinum-{{ character.id }}"
-                                   class="w-20 px-2 py-1 border rounded currency-input" 
-                                   data-char-id="{{ character.id }}" 
-                                   data-currency-type="platinum_pieces" 
-                                   value="{{ character.platinum_pieces }}"
-                                   min="0"
-                                   title="Platinum Pieces"
-                                   aria-label="Platinum Pieces">
+                            <input type="number" id="platinum-{{ character.id }}"
+                                class="w-20 px-2 py-1 border rounded currency-input" data-char-id="{{ character.id }}"
+                                data-currency-type="platinum_pieces" value="{{ character.platinum_pieces }}" min="0"
+                                title="Platinum Pieces" aria-label="Platinum Pieces">
                         </div>
                     </div>
                 </div>
@@ -253,19 +252,37 @@
                     <li>{{ skill.name }}</li>
                     {% endfor %}
                 </ul>
-                <p>Equipment:</p>
-                <ul>
-                    {% for item in character.inventory %}
-                    <li>{{ item.name }}</li>
-                    {% endfor %}
                 </ul>
+                <div class="mt-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="font-semibold">Equipment:</p>
+                        <button class="text-xs bg-blue-500 hover:bg-blue-600 text-white rounded px-2 py-1 add-item-btn"
+                            data-char-id="{{ character.id }}">
+                            + Add Item
+                        </button>
+                    </div>
+                    <ul id="inventory-list-{{ character.id }}">
+                        {% for item in character.inventory %}
+                        <li
+                            class="flex items-center justify-between py-1 text-sm border-b border-gray-100 last:border-0">
+                            <span>{{ item.name }} <span class="text-gray-400 text-xs">({{ item.item_type
+                                    }})</span></span>
+                            <button class="text-red-400 hover:text-red-600 remove-item-btn"
+                                data-char-id="{{ character.id }}" data-item-id="{{ item.id }}" title="Remove Item">
+                                ×
+                            </button>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
             </div>
             {% endfor %}
         </div>
     </div>
 
     <!-- Modal for Editing Character -->
-    <div id="edit-character-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
+    <div id="edit-character-modal"
+        class="hidden fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
         <div class="form-container p-8 md:p-10 w-full max-w-md">
             <h2 class="text-2xl font-bold text-center mb-4">Edit Character</h2>
             <form id="edit-character-form" class="space-y-6">
@@ -281,7 +298,8 @@
                     </div>
                 </div>
                 <div>
-                    <label for="edit-ability-modification" class="block text-sm font-medium text-gray-700">Ability Score Modification</label>
+                    <label for="edit-ability-modification" class="block text-sm font-medium text-gray-700">Ability Score
+                        Modification</label>
                     <select id="edit-ability-modification" name="ability_modification" class="form-input">
                         <option value="">None</option>
                         <option value="all_plus_one">Add 1 to all ability scores</option>
@@ -289,7 +307,8 @@
                     </select>
                 </div>
                 <div id="edit-single-ability" class="hidden">
-                    <label for="edit-selected-ability" class="block text-sm font-medium text-gray-700">Select Ability</label>
+                    <label for="edit-selected-ability" class="block text-sm font-medium text-gray-700">Select
+                        Ability</label>
                     <select id="edit-selected-ability" name="selected_ability" class="form-input">
                         <option value="strength">Strength</option>
                         <option value="dexterity">Dexterity</option>
@@ -299,261 +318,474 @@
                         <option value="charisma">Charisma</option>
                     </select>
                 </div>
+                <div class="border-t pt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Character Portrait</label>
+                    <div class="flex items-center gap-2">
+                        <input type="file" id="portrait-upload" accept="image/*" class="text-sm">
+                        <button type="button" id="upload-btn"
+                            class="btn btn-secondary text-sm py-1 px-2">Upload</button>
+                    </div>
+                    <p id="upload-status" class="text-xs mt-1 text-gray-500"></p>
+                </div>
+
                 <button type="submit" class="btn btn-primary w-full">Save Changes</button>
                 <button type="button" id="close-edit-modal" class="btn btn-secondary w-full">Cancel</button>
             </form>
         </div>
     </div>
 
+    <!-- Modal for Adding Items -->
+    <div id="add-item-modal"
+        class="hidden fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 max-h-[90vh] flex flex-col">
+            <h2 class="text-2xl font-bold mb-4">Add Equipment</h2>
+            <input type="hidden" id="add-item-char-id">
+            <div class="mb-4">
+                <input type="text" id="item-search" placeholder="Search items..."
+                    class="w-full px-3 py-2 border rounded">
+            </div>
+            <div class="overflow-y-auto flex-1 mb-4 border rounded" id="item-list-container">
+                <!-- Items populated here -->
+                <div class="p-4 text-center text-gray-500" id="items-loading">Loading items...</div>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" id="close-add-item-modal"
+                    class="btn btn-secondary bg-gray-500 hover:bg-gray-600">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const panel = document.getElementById('char-details-panel');
-    const empty = document.getElementById('char-details-empty');
-    const content = document.getElementById('char-details-content');
+        document.addEventListener('DOMContentLoaded', function () {
+            const panel = document.getElementById('char-details-panel');
+            const empty = document.getElementById('char-details-empty');
+            const content = document.getElementById('char-details-content');
 
-    function showDetailsFromCard(card) {
-        const name = card.dataset.name || '';
-        const level = card.dataset.level || '';
-        const age = card.dataset.age || '';
-        const cls = card.dataset.class || '';
-        const race = card.dataset.race || '';
-    const str = card.dataset.str || '-';
-        const dex = card.dataset.dex || '-';
-        const con = card.dataset.con || '-';
-        const intl = card.dataset.int || '-';
-        const wis = card.dataset.wis || '-';
-        const cha = card.dataset.cha || '-';
-    const background = card.dataset.background || '';
+            function showDetailsFromCard(card) {
+                const name = card.dataset.name || '';
+                const level = card.dataset.level || '';
+                const age = card.dataset.age || '';
+                const cls = card.dataset.class || '';
+                const race = card.dataset.race || '';
+                const str = card.dataset.str || '-';
+                const dex = card.dataset.dex || '-';
+                const con = card.dataset.con || '-';
+                const intl = card.dataset.int || '-';
+                const wis = card.dataset.wis || '-';
+                const cha = card.dataset.cha || '-';
+                const background = card.dataset.background || '';
 
-        // Populate panel
-        document.getElementById('detail-name').textContent = name;
-        document.getElementById('detail-sub').textContent = `Level ${level} • Age ${age}`;
-        document.getElementById('detail-class').textContent = cls || 'N/A';
-        document.getElementById('detail-race').textContent = race || 'N/A';
-    document.getElementById('detail-background').textContent = background || 'N/A';
-        document.getElementById('detail-str').textContent = str;
-        document.getElementById('detail-dex').textContent = dex;
-        document.getElementById('detail-con').textContent = con;
-        document.getElementById('detail-int').textContent = intl;
-        document.getElementById('detail-wis').textContent = wis;
-        document.getElementById('detail-cha').textContent = cha;
+                // Populate panel
+                document.getElementById('detail-name').textContent = name;
+                document.getElementById('detail-sub').textContent = `Level ${level} • Age ${age}`;
+                document.getElementById('detail-class').textContent = cls || 'N/A';
+                document.getElementById('detail-race').textContent = race || 'N/A';
+                document.getElementById('detail-background').textContent = background || 'N/A';
+                document.getElementById('detail-str').textContent = str;
+                document.getElementById('detail-dex').textContent = dex;
+                document.getElementById('detail-con').textContent = con;
+                document.getElementById('detail-int').textContent = intl;
+                document.getElementById('detail-wis').textContent = wis;
+                document.getElementById('detail-cha').textContent = cha;
 
-        // Set thumbnail (use dicebear seed)
-        const thumb = document.getElementById('detail-thumb');
-        thumb.src = `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name)}`;
-        thumb.alt = `Thumbnail for ${name}`;
+                // Set thumbnail (use dicebear seed)
+                // Set thumbnail (use dicebear seed or uploaded image)
+                const thumb = document.getElementById('detail-thumb');
+                // We need to pass the image path in data attributes to access it here
+                const imgPath = card.dataset.image;
+                if (imgPath && imgPath !== 'None') {
+                    thumb.src = '/' + imgPath;
+                } else {
+                    thumb.src = `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name)}`;
+                }
+                thumb.alt = `Thumbnail for ${name}`;
 
-        empty.classList.add('hidden');
-        content.classList.remove('hidden');
-    }
+                empty.classList.add('hidden');
+                content.classList.remove('hidden');
+            }
 
-    // Hover and click handlers
-    document.querySelectorAll('.character-card').forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            showDetailsFromCard(card);
-        });
-        // Touch/click selects the card on mobile
-        card.addEventListener('click', function(e) {
-            showDetailsFromCard(card);
-            e.stopPropagation();
-        });
-    });
-
-    // Clicking outside clears selection on small screens
-    document.addEventListener('click', function() {
-        if (window.innerWidth < 768) {
-            document.getElementById('detail-name').textContent = '';
-            document.getElementById('detail-sub').textContent = '';
-            empty.classList.remove('hidden');
-            content.classList.add('hidden');
-        }
-    });
-});
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const modal = document.getElementById('edit-character-modal');
-    const form = document.getElementById('edit-character-form');
-    const closeModal = document.getElementById('close-edit-modal');
-    const abilityModSelect = document.getElementById('edit-ability-modification');
-    const singleAbilityDiv = document.getElementById('edit-single-ability');
-
-    // Function to handle edit button clicks
-    async function handleEditButtonClick(button) {
-        const characterId = button.dataset.id;
-        const response = await fetch(`/get-character/${characterId}`);
-        if (!response.ok) return;
-
-        const character = await response.json();
-        
-        // Validate level for ability score improvement
-        if (character.level < 4 || character.level % 4 !== 0) {
-            alert("Your character's level isn't high enough for your next ability score improvement.");
-            return;
-        }
-
-        // Set form values
-        document.getElementById('edit-character-id').value = character.id;
-        document.getElementById('edit-character-level').value = character.level;
-
-        // Populate skills
-        const skillsContainer = document.getElementById('edit-character-skills');
-        skillsContainer.innerHTML = '';
-        character.available_skills.forEach(skill => {
-            const div = document.createElement('div');
-            const checkbox = document.createElement('input');
-            const label = document.createElement('label');
-            
-            checkbox.type = 'checkbox';
-            checkbox.id = `skill-${skill.id}`;
-            checkbox.name = 'skills';
-            checkbox.value = skill.id;
-            checkbox.checked = character.skills.includes(skill.id);
-
-            label.htmlFor = `skill-${skill.id}`;
-            label.textContent = skill.name;
-
-            div.appendChild(checkbox);
-            div.appendChild(label);
-            skillsContainer.appendChild(div);
-        });
-
-        modal.classList.remove('hidden');
-    }
-
-    // Add event listeners
-    document.querySelectorAll('.edit-character-btn').forEach(button => {
-        button.addEventListener('click', () => handleEditButtonClick(button));
-    });
-
-    closeModal.addEventListener('click', () => {
-        modal.classList.add('hidden');
-        form.reset();
-    });
-
-    abilityModSelect.addEventListener('change', () => {
-        singleAbilityDiv.classList.toggle('hidden', abilityModSelect.value !== 'single_plus_two');
-    });
-
-    form.addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const formData = new FormData(form);
-
-        // Add ability modification data
-        const abilityModification = abilityModSelect.value;
-        formData.append('ability_modification', abilityModification);
-
-        if (abilityModification === 'single_plus_two') {
-            const selectedAbility = document.getElementById('edit-selected-ability').value;
-            formData.append('selected_ability', selectedAbility);
-        }
-
-        try {
-            const response = await fetch('/update-character', {
-                method: 'POST',
-                body: formData
+            // Hover and click handlers
+            document.querySelectorAll('.character-card').forEach(card => {
+                card.addEventListener('mouseenter', function () {
+                    showDetailsFromCard(card);
+                });
+                // Touch/click selects the card on mobile
+                card.addEventListener('click', function (e) {
+                    showDetailsFromCard(card);
+                    e.stopPropagation();
+                });
             });
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to update character');
+            // Clicking outside clears selection on small screens
+            document.addEventListener('click', function () {
+                if (window.innerWidth < 768) {
+                    document.getElementById('detail-name').textContent = '';
+                    document.getElementById('detail-sub').textContent = '';
+                    empty.classList.remove('hidden');
+                    content.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modal = document.getElementById('edit-character-modal');
+            const form = document.getElementById('edit-character-form');
+            const closeModal = document.getElementById('close-edit-modal');
+            const abilityModSelect = document.getElementById('edit-ability-modification');
+            const singleAbilityDiv = document.getElementById('edit-single-ability');
+
+            // Function to handle edit button clicks
+            async function handleEditButtonClick(button) {
+                const characterId = button.dataset.id;
+                const response = await fetch(`/get-character/${characterId}`);
+                if (!response.ok) return;
+
+                const character = await response.json();
+
+                // Validate level for ability score improvement
+                if (character.level < 4 || character.level % 4 !== 0) {
+                    alert("Your character's level isn't high enough for your next ability score improvement.");
+                    return;
+                }
+
+                // Set form values
+                document.getElementById('edit-character-id').value = character.id;
+                document.getElementById('edit-character-level').value = character.level;
+
+                // Populate skills
+                const skillsContainer = document.getElementById('edit-character-skills');
+                skillsContainer.innerHTML = '';
+                character.available_skills.forEach(skill => {
+                    const div = document.createElement('div');
+                    const checkbox = document.createElement('input');
+                    const label = document.createElement('label');
+
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `skill-${skill.id}`;
+                    checkbox.name = 'skills';
+                    checkbox.value = skill.id;
+                    checkbox.checked = character.skills.includes(skill.id);
+
+                    label.htmlFor = `skill-${skill.id}`;
+                    label.textContent = skill.name;
+
+                    div.appendChild(checkbox);
+                    div.appendChild(label);
+                    skillsContainer.appendChild(div);
+                });
+
+                modal.classList.remove('hidden');
             }
 
-            alert('Character updated successfully!');
-            modal.classList.add('hidden');
-            location.reload();
-        } catch (error) {
-            console.error('Error updating character:', error);
-            alert(`Failed to update character: ${error.message}`);
-        }
-    });
-});
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Debounce function to limit API calls
-    function debounce(func, wait) {
-        let timeout;
-        return function(...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), wait);
-        };
-    }
-
-    // Handle currency updates
-    async function updateCurrency(input) {
-        const characterId = input.dataset.charId;
-        const currencyType = input.dataset.currencyType;
-        const newValue = input.value;
-        const originalValue = input.defaultValue;
-
-        try {
-            // Validate input
-            const value = parseInt(newValue);
-            if (isNaN(value) || value < 0) {
-                throw new Error('Currency must be a non-negative number');
-            }
-
-            const response = await fetch('/update-character-currency', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    character_id: characterId,
-                    currency_type: currencyType,
-                    value: value
-                })
+            // Add event listeners
+            document.querySelectorAll('.edit-character-btn').forEach(button => {
+                button.addEventListener('click', () => handleEditButtonClick(button));
             });
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to update currency');
+            closeModal.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                form.reset();
+            });
+
+            abilityModSelect.addEventListener('change', () => {
+                singleAbilityDiv.classList.toggle('hidden', abilityModSelect.value !== 'single_plus_two');
+            });
+
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const formData = new FormData(form);
+
+                // Add ability modification data
+                const abilityModification = abilityModSelect.value;
+                formData.append('ability_modification', abilityModification);
+
+                if (abilityModification === 'single_plus_two') {
+                    const selectedAbility = document.getElementById('edit-selected-ability').value;
+                    formData.append('selected_ability', selectedAbility);
+                }
+
+                try {
+                    const response = await fetch('/update-character', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to update character');
+                    }
+
+                    alert('Character updated successfully!');
+                    modal.classList.add('hidden');
+                    location.reload();
+                } catch (error) {
+                    console.error('Error updating character:', error);
+                    alert(`Failed to update character: ${error.message}`);
+                }
+            });
+
+            // Upload Portrait Logic
+            const uploadBtn = document.getElementById('upload-btn');
+            const uploadInput = document.getElementById('portrait-upload');
+            const uploadStatus = document.getElementById('upload-status');
+
+            if (uploadBtn) {
+                uploadBtn.addEventListener('click', async () => {
+                    const file = uploadInput.files[0];
+                    const charId = document.getElementById('edit-character-id').value;
+                    if (!file || !charId) {
+                        uploadStatus.textContent = "Please select a file first.";
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('character_id', charId);
+
+                    try {
+                        uploadStatus.textContent = "Uploading...";
+                        const res = await fetch('/upload-portrait', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            uploadStatus.textContent = "Upload successful! Refresh to see changes.";
+                            uploadStatus.className = "text-xs mt-1 text-green-600";
+                        } else {
+                            uploadStatus.textContent = "Error: " + data.error;
+                            uploadStatus.className = "text-xs mt-1 text-red-600";
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        uploadStatus.textContent = "Network error.";
+                        uploadStatus.className = "text-xs mt-1 text-red-600";
+                    }
+                });
+            }
+        });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Debounce function to limit API calls
+            function debounce(func, wait) {
+                let timeout;
+                return function (...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), wait);
+                };
             }
 
-            // Update the default value to the new value on success
-            input.defaultValue = value;
+            // Handle currency updates
+            async function updateCurrency(input) {
+                const characterId = input.dataset.charId;
+                const currencyType = input.dataset.currencyType;
+                const newValue = input.value;
+                const originalValue = input.defaultValue;
 
-            // Show a temporary success message near the input
-            const messageDiv = document.createElement('div');
-            messageDiv.textContent = '✓ Saved';
-            messageDiv.className = 'text-green-600 text-sm absolute mt-1';
-            input.parentNode.appendChild(messageDiv);
-            setTimeout(() => messageDiv.remove(), 2000);
+                try {
+                    // Validate input
+                    const value = parseInt(newValue);
+                    if (isNaN(value) || value < 0) {
+                        throw new Error('Currency must be a non-negative number');
+                    }
 
-        } catch (error) {
-            console.error('Error updating currency:', error);
-            alert(error.message);
-            // Reset to original value
-            input.value = originalValue;
-        }
-    }
+                    const response = await fetch('/update-character-currency', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            character_id: characterId,
+                            currency_type: currencyType,
+                            value: value
+                        })
+                    });
 
-    // Add event listeners to currency inputs with debouncing
-    const debouncedUpdate = debounce(updateCurrency, 500);
-    document.querySelectorAll('.currency-input').forEach(input => {
-        input.addEventListener('change', () => debouncedUpdate(input));
-        
-        // Add input validation
-        input.addEventListener('input', function() {
-            if (this.value < 0) this.value = 0;
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to update currency');
+                    }
+
+                    // Update the default value to the new value on success
+                    input.defaultValue = value;
+
+                    // Show a temporary success message near the input
+                    const messageDiv = document.createElement('div');
+                    messageDiv.textContent = '✓ Saved';
+                    messageDiv.className = 'text-green-600 text-sm absolute mt-1';
+                    input.parentNode.appendChild(messageDiv);
+                    setTimeout(() => messageDiv.remove(), 2000);
+
+                } catch (error) {
+                    console.error('Error updating currency:', error);
+                    alert(error.message);
+                    // Reset to original value
+                    input.value = originalValue;
+                }
+            }
+
+            // Add event listeners to currency inputs with debouncing
+            const debouncedUpdate = debounce(updateCurrency, 500);
+            document.querySelectorAll('.currency-input').forEach(input => {
+                input.addEventListener('change', () => debouncedUpdate(input));
+
+                // Add input validation
+                input.addEventListener('input', function () {
+                    if (this.value < 0) this.value = 0;
+                });
+            });
+
+            // Inventory Management Logic
+            const addItemModal = document.getElementById('add-item-modal');
+            const closeAddItemModal = document.getElementById('close-add-item-modal');
+            const itemListContainer = document.getElementById('item-list-container');
+            const itemSearch = document.getElementById('item-search');
+            let allItems = [];
+
+            // Add Item Button Click
+            document.querySelectorAll('.add-item-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const charId = btn.dataset.charId;
+                    document.getElementById('add-item-char-id').value = charId;
+                    addItemModal.classList.remove('hidden');
+
+                    if (allItems.length === 0) {
+                        try {
+                            const res = await fetch('/get-all-equipment');
+                            allItems = await res.json();
+                            renderItems(allItems);
+                        } catch (e) {
+                            itemListContainer.innerHTML = '<p class="p-4 text-red-500">Error loading items.</p>';
+                        }
+                    } else {
+                        renderItems(allItems);
+                    }
+                });
+            });
+
+            if (closeAddItemModal) {
+                closeAddItemModal.addEventListener('click', () => {
+                    addItemModal.classList.add('hidden');
+                    itemSearch.value = '';
+                });
+            }
+
+            // Filtering
+            if (itemSearch) {
+                itemSearch.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase();
+                    const filtered = allItems.filter(item => item.name.toLowerCase().includes(term));
+                    renderItems(filtered);
+                });
+            }
+
+            function renderItems(items) {
+                if (!itemListContainer) return;
+                itemListContainer.innerHTML = '';
+                if (items.length === 0) {
+                    itemListContainer.innerHTML = '<p class="p-4 text-gray-500 text-center">No items found.</p>';
+                    return;
+                }
+                const list = document.createElement('ul');
+                list.className = 'divide-y divide-gray-100';
+
+                items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'p-3 hover:bg-gray-50 flex justify-between items-center cursor-pointer';
+                    li.innerHTML = `
+                        <div>
+                            <div class="font-bold text-sm">${item.name}</div>
+                            <div class="text-xs text-gray-500">${item.item_type}</div>
+                        </div>
+                        <button class="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 add-specific-item-btn" data-id="${item.id}">Add</button>
+                    `;
+                    // Click the whole row or button
+                    li.addEventListener('click', () => addItemToCharacter(item.id));
+                    list.appendChild(li);
+                });
+                itemListContainer.appendChild(list);
+            }
+
+            async function addItemToCharacter(itemId) {
+                const charId = document.getElementById('add-item-char-id').value;
+                try {
+                    const res = await fetch('/add-inventory-item', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ character_id: charId, item_id: itemId })
+                    });
+                    if (res.ok) {
+                        // Refresh page to show new item (simplest way for now)
+                        location.reload();
+                    } else {
+                        alert('Failed to add item.');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Network error.');
+                }
+            }
+
+            // Remove Item Logic
+            document.querySelectorAll('.remove-item-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    if (!confirm('Remove this item?')) return;
+
+                    const charId = btn.dataset.charId;
+                    const itemId = btn.dataset.itemId;
+
+                    try {
+                        const res = await fetch('/remove-inventory-item', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ character_id: charId, item_id: itemId })
+                        });
+                        if (res.ok) {
+                            location.reload();
+                        } else {
+                            alert('Failed to remove item.');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert('Network error.');
+                    }
+                });
+            });
         });
-    });
-});
-</script>
+    </script>
 </body>
+
 </html>
 
 <style>
-/* Left-right layout adjustments */
-.md\:flex { display: flex; }
-.md\:space-x-6 > * + * { margin-left: 1.5rem; }
-@media (min-width: 768px) {
-    .md\:w-1\/2 { width: 50%; }
-}
-.character-card { cursor: pointer; }
-.character-card:hover { background-color: #fbfbff; }
-.character-thumb img { display: block; }
+    /* Left-right layout adjustments */
+    .md\:flex {
+        display: flex;
+    }
+
+    .md\:space-x-6>*+* {
+        margin-left: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+        .md\:w-1\/2 {
+            width: 50%;
+        }
+    }
+
+    .character-card {
+        cursor: pointer;
+    }
+
+    .character-card:hover {
+        background-color: #fbfbff;
+    }
+
+    .character-thumb img {
+        display: block;
+    }
 </style>
