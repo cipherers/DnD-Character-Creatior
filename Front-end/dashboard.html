@@ -282,8 +282,10 @@
 
     <!-- Modal for Editing Character -->
     <div id="edit-character-modal"
-        class="hidden fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
-        <div class="form-container p-8 md:p-10 w-full max-w-md">
+        class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 ease-out">
+        <div class="absolute inset-0 bg-gray-800 bg-opacity-50 transition-opacity duration-300"></div>
+        <div class="form-container p-8 md:p-10 w-full max-w-md relative z-10 transform scale-95 transition-all duration-300 ease-out"
+            id="edit-modal-content">
             <h2 class="text-2xl font-bold text-center mb-4">Edit Character</h2>
             <form id="edit-character-form" class="space-y-6">
                 <input type="hidden" id="edit-character-id" name="character_id">
@@ -293,7 +295,7 @@
                 </div>
                 <div>
                     <label for="edit-character-skills" class="block text-sm font-medium text-gray-700">Skills</label>
-                    <div id="edit-character-skills" class="space-y-2">
+                    <div id="edit-character-skills" class="space-y-2 max-h-40 overflow-y-auto border p-2 rounded">
                         <!-- Skills checkboxes will be dynamically populated -->
                     </div>
                 </div>
@@ -328,16 +330,21 @@
                     <p id="upload-status" class="text-xs mt-1 text-gray-500"></p>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-full">Save Changes</button>
-                <button type="button" id="close-edit-modal" class="btn btn-secondary w-full">Cancel</button>
+                <div class="flex gap-3">
+                    <button type="submit" class="btn btn-primary flex-1">Save Changes</button>
+                    <button type="button" id="close-edit-modal"
+                        class="btn btn-secondary bg-gray-500 hover:bg-gray-600 flex-1">Cancel</button>
+                </div>
             </form>
         </div>
     </div>
 
     <!-- Modal for Adding Items -->
     <div id="add-item-modal"
-        class="hidden fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 max-h-[90vh] flex flex-col">
+        class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 ease-out">
+        <div class="absolute inset-0 bg-gray-800 bg-opacity-50 transition-opacity duration-300"></div>
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 max-h-[90vh] flex flex-col relative z-10 transform scale-95 transition-all duration-300 ease-out"
+            id="add-item-content">
             <h2 class="text-2xl font-bold mb-4">Add Equipment</h2>
             <input type="hidden" id="add-item-char-id">
             <div class="mb-4">
@@ -429,8 +436,24 @@
     </script>
 
     <script>
+        function toggleModal(modalId, show) {
+            const modal = document.getElementById(modalId);
+            const content = modal.querySelector('div[class*="transform"]');
+
+            if (show) {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            } else {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                content.classList.remove('scale-100');
+                content.classList.add('scale-95');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
-            const modal = document.getElementById('edit-character-modal');
+            const modalId = 'edit-character-modal';
+            const addItemModalId = 'add-item-modal';
             const form = document.getElementById('edit-character-form');
             const closeModal = document.getElementById('close-edit-modal');
             const abilityModSelect = document.getElementById('edit-ability-modification');
@@ -441,10 +464,9 @@
                 const characterId = button.dataset.id;
                 const response = await fetch(`/get-character/${characterId}`);
                 if (!response.ok) return;
-
                 const character = await response.json();
 
-                // Validate level for ability score improvement
+                // Validate level
                 if (character.level < 4 || character.level % 4 !== 0) {
                     alert("Your character's level isn't high enough for your next ability score improvement.");
                     return;
@@ -459,6 +481,7 @@
                 skillsContainer.innerHTML = '';
                 character.available_skills.forEach(skill => {
                     const div = document.createElement('div');
+                    div.className = 'flex items-center';
                     const checkbox = document.createElement('input');
                     const label = document.createElement('label');
 
@@ -467,89 +490,75 @@
                     checkbox.name = 'skills';
                     checkbox.value = skill.id;
                     checkbox.checked = character.skills.includes(skill.id);
+                    checkbox.className = 'mr-2';
 
                     label.htmlFor = `skill-${skill.id}`;
                     label.textContent = skill.name;
+                    label.className = 'text-sm text-gray-700';
 
                     div.appendChild(checkbox);
                     div.appendChild(label);
                     skillsContainer.appendChild(div);
                 });
 
-                modal.classList.remove('hidden');
+                toggleModal(modalId, true);
             }
 
-            // Add event listeners
+            // Edit Listeners
             document.querySelectorAll('.edit-character-btn').forEach(button => {
                 button.addEventListener('click', () => handleEditButtonClick(button));
             });
 
             closeModal.addEventListener('click', () => {
-                modal.classList.add('hidden');
+                toggleModal(modalId, false);
                 form.reset();
             });
 
+            // ... (Ability Mod listener same as before)
             abilityModSelect.addEventListener('change', () => {
                 singleAbilityDiv.classList.toggle('hidden', abilityModSelect.value !== 'single_plus_two');
             });
 
+            // Form Submit (same as before)
             form.addEventListener('submit', async function (e) {
                 e.preventDefault();
                 const formData = new FormData(form);
-
-                // Add ability modification data
                 const abilityModification = abilityModSelect.value;
                 formData.append('ability_modification', abilityModification);
-
                 if (abilityModification === 'single_plus_two') {
                     const selectedAbility = document.getElementById('edit-selected-ability').value;
                     formData.append('selected_ability', selectedAbility);
                 }
 
                 try {
-                    const response = await fetch('/update-character', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (!response.ok) {
-                        const error = await response.json();
-                        throw new Error(error.error || 'Failed to update character');
-                    }
-
+                    const response = await fetch('/update-character', { method: 'POST', body: formData });
+                    if (!response.ok) throw new Error((await response.json()).error || 'Failed to update');
                     alert('Character updated successfully!');
-                    modal.classList.add('hidden');
+                    toggleModal(modalId, false);
                     location.reload();
                 } catch (error) {
-                    console.error('Error updating character:', error);
-                    alert(`Failed to update character: ${error.message}`);
+                    console.error(error);
+                    alert(`Failed to update: ${error.message}`);
                 }
             });
 
-            // Upload Portrait Logic
+            // ... (Upload Portrait Logic same as before)
             const uploadBtn = document.getElementById('upload-btn');
             const uploadInput = document.getElementById('portrait-upload');
             const uploadStatus = document.getElementById('upload-status');
-
             if (uploadBtn) {
                 uploadBtn.addEventListener('click', async () => {
                     const file = uploadInput.files[0];
                     const charId = document.getElementById('edit-character-id').value;
                     if (!file || !charId) {
-                        uploadStatus.textContent = "Please select a file first.";
-                        return;
+                        uploadStatus.textContent = "Please select a file first."; return;
                     }
-
                     const formData = new FormData();
                     formData.append('file', file);
                     formData.append('character_id', charId);
-
                     try {
                         uploadStatus.textContent = "Uploading...";
-                        const res = await fetch('/upload-portrait', {
-                            method: 'POST',
-                            body: formData
-                        });
+                        const res = await fetch('/upload-portrait', { method: 'POST', body: formData });
                         const data = await res.json();
                         if (res.ok) {
                             uploadStatus.textContent = "Upload successful! Refresh to see changes.";
@@ -559,15 +568,121 @@
                             uploadStatus.className = "text-xs mt-1 text-red-600";
                         }
                     } catch (err) {
-                        console.error(err);
                         uploadStatus.textContent = "Network error.";
-                        uploadStatus.className = "text-xs mt-1 text-red-600";
                     }
                 });
             }
         });
     </script>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // ... (Currency debounce same as before)
+            function debounce(func, wait) {
+                let timeout;
+                return function (...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), wait); };
+            }
+            async function updateCurrency(input) {
+                // ... (same implementation)
+                const characterId = input.dataset.charId;
+                const currencyType = input.dataset.currencyType;
+                const newValue = input.value;
+                try {
+                    const value = parseInt(newValue);
+                    if (isNaN(value) || value < 0) throw new Error('Invalid value');
+                    await fetch('/update-character-currency', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ character_id: characterId, currency_type: currencyType, value: value })
+                    });
+                    // Success indicator
+                    const messageDiv = document.createElement('div');
+                    messageDiv.textContent = '✓';
+                    messageDiv.className = 'text-green-600 text-xs absolute';
+                    input.parentNode.appendChild(messageDiv);
+                    setTimeout(() => messageDiv.remove(), 1000);
+                } catch (e) { console.error(e); }
+            }
+            const debouncedUpdate = debounce(updateCurrency, 500);
+            document.querySelectorAll('.currency-input').forEach(input => {
+                input.addEventListener('change', () => debouncedUpdate(input));
+                input.addEventListener('input', function () { if (this.value < 0) this.value = 0; });
+            });
+
+
+            // Inventory Logic with ToggleModal
+            const addItemModalId = 'add-item-modal';
+            const closeAddItemModal = document.getElementById('close-add-item-modal');
+            const itemListContainer = document.getElementById('item-list-container');
+            const itemSearch = document.getElementById('item-search');
+            let allItems = [];
+
+            document.querySelectorAll('.add-item-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const charId = btn.dataset.charId;
+                    document.getElementById('add-item-char-id').value = charId;
+                    toggleModal(addItemModalId, true);
+
+                    if (allItems.length === 0) {
+                        try {
+                            const res = await fetch('/get-all-equipment');
+                            allItems = await res.json();
+                            renderItems(allItems);
+                        } catch (e) {
+                            itemListContainer.innerHTML = '<p class="p-4 text-red-500">Error loading items.</p>';
+                        }
+                    } else { renderItems(allItems); }
+                });
+            });
+
+            if (closeAddItemModal) {
+                closeAddItemModal.addEventListener('click', () => {
+                    toggleModal(addItemModalId, false);
+                    itemSearch.value = '';
+                });
+            }
+
+            // ... (Rest of logic: filtering, renderItems, addItem, removeItem)
+            if (itemSearch) {
+                itemSearch.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase();
+                    const filtered = allItems.filter(item => item.name.toLowerCase().includes(term));
+                    renderItems(filtered);
+                });
+            }
+            function renderItems(items) {
+                if (!itemListContainer) return;
+                itemListContainer.innerHTML = '';
+                if (items.length === 0) { itemListContainer.innerHTML = '<p class="p-4 text-gray-500 text-center">No items found.</p>'; return; }
+                const list = document.createElement('ul');
+                list.className = 'divide-y divide-gray-100';
+                items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'p-3 hover:bg-gray-50 flex justify-between items-center cursor-pointer';
+                    li.innerHTML = `<div><div class="font-bold text-sm">${item.name}</div><div class="text-xs text-gray-500">${item.item_type}</div></div><button class="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Add</button>`;
+                    li.addEventListener('click', () => addItemToCharacter(item.id));
+                    list.appendChild(li);
+                });
+                itemListContainer.appendChild(list);
+            }
+            async function addItemToCharacter(itemId) {
+                const charId = document.getElementById('add-item-char-id').value;
+                try {
+                    const res = await fetch('/add-inventory-item', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ character_id: charId, item_id: itemId }) });
+                    if (res.ok) { location.reload(); }
+                    else { const d = await res.json(); alert(d.error || 'Failed to add'); }
+                } catch (e) { alert('Network error'); }
+            }
+            document.querySelectorAll('.remove-item-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (!confirm('Remove?')) return;
+                    try {
+                        const res = await fetch('/remove-inventory-item', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ character_id: btn.dataset.charId, item_id: btn.dataset.itemId }) });
+                        if (res.ok) location.reload();
+                    } catch (e) { }
+                });
+            });
+        });
+    </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Debounce function to limit API calls
@@ -640,7 +755,7 @@
             });
 
             // Inventory Management Logic
-            const addItemModal = document.getElementById('add-item-modal');
+            const addItemModalId = 'add-item-modal';
             const closeAddItemModal = document.getElementById('close-add-item-modal');
             const itemListContainer = document.getElementById('item-list-container');
             const itemSearch = document.getElementById('item-search');
@@ -651,7 +766,7 @@
                 btn.addEventListener('click', async () => {
                     const charId = btn.dataset.charId;
                     document.getElementById('add-item-char-id').value = charId;
-                    addItemModal.classList.remove('hidden');
+                    toggleModal(addItemModalId, true);
 
                     if (allItems.length === 0) {
                         try {
@@ -669,7 +784,7 @@
 
             if (closeAddItemModal) {
                 closeAddItemModal.addEventListener('click', () => {
-                    addItemModal.classList.add('hidden');
+                    toggleModal(addItemModalId, false);
                     itemSearch.value = '';
                 });
             }
@@ -697,12 +812,12 @@
                     const li = document.createElement('li');
                     li.className = 'p-3 hover:bg-gray-50 flex justify-between items-center cursor-pointer';
                     li.innerHTML = `
-                        <div>
-                            <div class="font-bold text-sm">${item.name}</div>
-                            <div class="text-xs text-gray-500">${item.item_type}</div>
-                        </div>
-                        <button class="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 add-specific-item-btn" data-id="${item.id}">Add</button>
-                    `;
+                    <div>
+                        <div class="font-bold text-sm">${item.name}</div>
+                        <div class="text-xs text-gray-500">${item.item_type}</div>
+                    </div>
+                    <button class="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 add-specific-item-btn" data-id="${item.id}">Add</button>
+                `;
                     // Click the whole row or button
                     li.addEventListener('click', () => addItemToCharacter(item.id));
                     list.appendChild(li);
@@ -722,7 +837,8 @@
                         // Refresh page to show new item (simplest way for now)
                         location.reload();
                     } else {
-                        alert('Failed to add item.');
+                        const d = await res.json();
+                        alert(d.error || 'Failed to add item.');
                     }
                 } catch (e) {
                     console.error(e);

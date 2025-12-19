@@ -83,6 +83,9 @@ def add_inventory_item():
     if not item:
         return jsonify({'error': 'Item not found'}), 404
 
+    if item in character.inventory:
+        return jsonify({'error': 'Item already in inventory'}), 400
+
     character.inventory.append(item)
     db.session.commit()
     return jsonify({'message': 'Item added successfully'})
@@ -114,14 +117,13 @@ def remove_inventory_item():
 # --- Database Seeding Function ---
 def seed_database():
     """
-    Creates all database tables and populates them with sample data.
-    This function should be run only once to initialize the database.
+    Creates all database tables and populates them with sample data if missing.
     """
     with app.app_context():
         # Create all the tables defined by the models
         db.create_all()
 
-        # Ensure the characters table has the new 'user_id' column (migration for older DBs)
+        # Schema Migrations (Columns)
         try:
             info = db.session.execute(text("PRAGMA table_info(characters)")).fetchall()
             col_names = [row[1] for row in info]
@@ -129,128 +131,111 @@ def seed_database():
                 print("Adding missing 'user_id' column to characters table...")
                 db.session.execute(text("ALTER TABLE characters ADD COLUMN user_id INTEGER"))
                 db.session.commit()
-        except Exception as e:
-            print(f"Migration check skipped or failed: {e}")
-
-        # Ensure the characters table has the new 'image_path' column
-        try:
-            info = db.session.execute(text("PRAGMA table_info(characters)")).fetchall()
-            col_names = [row[1] for row in info]
             if 'image_path' not in col_names:
                 print("Adding missing 'image_path' column to characters table...")
                 db.session.execute(text("ALTER TABLE characters ADD COLUMN image_path TEXT"))
                 db.session.commit()
         except Exception as e:
-            print(f"Migration check for image_path skipped or failed: {e}")
+            print(f"Migration check skipped or failed: {e}")
 
-        # Check if tables are already populated to prevent duplicates
-        if Race.query.first():
-            print("Main data already seeded.")
-        else: 
-            print("Seeding database with sample data...")
-            # ... (Indentation of the block below needs to control what is skipped)
-            # The current structure has everything inside the main block.
-            # I need to separate the new data checks.
-            
-            # 1. Add some initial data for the foreign key tables
-            human = Race(name='Human', description='A versatile and ambitious race.', strength_bonus=1, dexterity_bonus=1, constitution_bonus=1, intelligence_bonus=1, wisdom_bonus=1, charisma_bonus=1)
-            elf = Race(name='Elf', description='Graceful and long-lived.', dexterity_bonus=2, intelligence_bonus=1)
-            
-            class_fighter = Class(name='Fighter', description='A master of combat.', hit_die=10)
-            class_wizard = Class(name='Wizard', description='A student of arcane magic.', hit_die=6)
-    
-            background_acolyte = Background(name='Acolyte', description='Serving a deity and a temple.')
-            
-            skill_athletics = Skill(name='Athletics', description='Physical prowess and strength.', associated_attribute='strength')
-            skill_stealth = Skill(name='Stealth', description='Hiding and moving quietly.', associated_attribute='dexterity')
-            
-            equipment_sword = Equipment(name='LongSword', description='A classic one-handed sword.', item_type='Weapon', damage_dice='1d8', damage_type='Slashing')
-            equipment_shield = Equipment(name='Shield', description='Provides protection.', item_type='Armor', ac=2)
-    
-            db.session.add_all([
-                human, elf,
-                class_fighter, class_wizard,
-                background_acolyte,
-                skill_athletics, skill_stealth,
-                equipment_sword, equipment_shield
-            ])
-            db.session.commit()
-
-            # Ensure at least one user exists for foreign key user_id
-            from models import User as UserModel
-            seed_user = User.query.first()
-            if not seed_user:
-                seed_user = User(username='seed_user')
-                seed_user.set_password('password')
-                db.session.add(seed_user)
+        def get_or_create(model, defaults=None, **kwargs):
+            instance = model.query.filter_by(**kwargs).first()
+            if instance:
+                return instance, False
+            else:
+                params = {k: v for k, v in kwargs.items()}
+                if defaults:
+                    params.update(defaults)
+                instance = model(**params)
+                db.session.add(instance)
                 db.session.commit()
-    
-            # 2. Create a new Character and link it to the seeded data
-            main_character = Character(
-                name='Arthur',
-                age=25,
-                alignment='Lawful Good',
-                hp=15,
-                strength=15,
-                dexterity=12,
-                constitution=14,
-                intelligence=10,
-                wisdom=11,
-                charisma=13,
-                race=human, # Pass the Race object
-                character_class=class_fighter, # Pass the Class object
-                background=background_acolyte,
-                user=seed_user,
-                level = 1
-            )
-    
-            # 3. Add proficiencies and equipment using the relationships
-            main_character.proficiencies.append(skill_athletics)
-            main_character.inventory.append(equipment_sword)
-            main_character.inventory.append(equipment_shield)
-    
-            db.session.add(main_character)
-            db.session.commit()
-            print("Database seeding complete!")
+                return instance, True
+
+        print("Checking/Seeding database content...")
+
+        # 1. Races
+        races_data = [
+            {'name': 'Human', 'description': 'A versatile and ambitious race.', 'strength_bonus': 1, 'dexterity_bonus': 1, 'constitution_bonus': 1, 'intelligence_bonus': 1, 'wisdom_bonus': 1, 'charisma_bonus': 1},
+            {'name': 'Elf', 'description': 'Graceful and long-lived.', 'dexterity_bonus': 2, 'intelligence_bonus': 1},
+            {'name': 'Dwarf', 'description': 'Bold and hardy.', 'constitution_bonus': 2},
+            {'name': 'Halfling', 'description': 'Small and nimble.', 'dexterity_bonus': 2},
+        ]
+        races = {r['name']: get_or_create(Race, name=r['name'], defaults=r)[0] for r in races_data}
         
-        # Check for Spells independently
-        if not Spell.query.first():
-             # Add basic Spells
-            spell_fireball = Spell(
-                name='Fireball', 
-                level=3, 
-                school='Evocation', 
-                casting_time='1 Action', 
-                range_val='150 feet', 
-                components='V, S, M', 
-                duration='Instantaneous', 
-                description='A bright streak flashes from your pointing finger to a point you choose...'
-            )
-            spell_cure_wounds = Spell(
-                name='Cure Wounds', 
-                level=1, 
-                school='Evocation', 
-                casting_time='1 Action', 
-                range_val='Touch', 
-                components='V, S', 
-                duration='Instantaneous', 
-                description='A creature you touch regains a number of hit points equal to 1d8 + your spellcasting ability modifier.'
-            )
-            db.session.add_all([spell_fireball, spell_cure_wounds])
-            db.session.commit()
-            print("Seeded basic spells.")
+        # 2. Classes
+        classes_data = [
+            {'name': 'Fighter', 'description': 'A master of combat.', 'hit_die': 10},
+            {'name': 'Wizard', 'description': 'A student of arcane magic.', 'hit_die': 6},
+            {'name': 'Rogue', 'description': 'A scoundrel who uses stealth and trickery.', 'hit_die': 8},
+            {'name': 'Cleric', 'description': 'A priestly champion who wields divine magic.', 'hit_die': 8},
+        ]
+        classes = {c['name']: get_or_create(Class, name=c['name'], defaults=c)[0] for c in classes_data}
 
-        # Check for Feats
-        if not Feat.query.first():
-            # Add basic Feats
-            feat_alert = Feat(
-                name='Alert', 
-                description='Always on the lookout for danger. You gain +5 to initiative, cannot be surprised, and hidden attackers dont get advantage.'
-            )
-            db.session.add(feat_alert)
-            db.session.commit()
-            print("Seeded basic feats.")
+        # 3. Backgrounds
+        backgrounds_data = [
+            {'name': 'Acolyte', 'description': 'Serving a deity and a temple.'},
+            {'name': 'Soldier', 'description': 'A trained warrior.'}
+        ]
+        backgrounds = {b['name']: get_or_create(Background, name=b['name'], defaults=b)[0] for b in backgrounds_data}
 
+        # 4. Skills
+        skills_data = [
+            {'name': 'Athletics', 'associated_attribute': 'Strength'}, {'name': 'Acrobatics', 'associated_attribute': 'Dexterity'},
+            {'name': 'Stealth', 'associated_attribute': 'Dexterity'}, {'name': 'Arcana', 'associated_attribute': 'Intelligence'},
+            {'name': 'History', 'associated_attribute': 'Intelligence'}, {'name': 'Investigation', 'associated_attribute': 'Intelligence'},
+            {'name': 'Nature', 'associated_attribute': 'Intelligence'}, {'name': 'Religion', 'associated_attribute': 'Intelligence'},
+            {'name': 'Animal Handling', 'associated_attribute': 'Wisdom'}, {'name': 'Insight', 'associated_attribute': 'Wisdom'},
+            {'name': 'Medicine', 'associated_attribute': 'Wisdom'}, {'name': 'Perception', 'associated_attribute': 'Wisdom'},
+            {'name': 'Survival', 'associated_attribute': 'Wisdom'}, {'name': 'Deception', 'associated_attribute': 'Charisma'},
+            {'name': 'Intimidation', 'associated_attribute': 'Charisma'}, {'name': 'Performance', 'associated_attribute': 'Charisma'},
+            {'name': 'Persuasion', 'associated_attribute': 'Charisma'}, {'name': 'Sleight of Hand', 'associated_attribute': 'Dexterity'}
+        ]
+        for s in skills_data:
+            get_or_create(Skill, name=s['name'], defaults={'description': 'Standard skill', **s})
+
+        # 5. Equipment
+        equipment_data = [
+            {'name': 'LongSword', 'item_type': 'Weapon', 'description': '1d8 slashing damage'},
+            {'name': 'ShortSword', 'item_type': 'Weapon', 'description': '1d6 piercing damage'},
+            {'name': 'Dagger', 'item_type': 'Weapon', 'description': '1d4 piercing damage'},
+            {'name': 'GreatAxe', 'item_type': 'Weapon', 'description': '1d12 slashing damage'},
+            {'name': 'Shield', 'item_type': 'Armor', 'description': '+2 AC'},
+            {'name': 'Leather Armor', 'item_type': 'Armor', 'description': '11 + Dex Modifier AC'},
+            {'name': 'Chain Mail', 'item_type': 'Armor', 'description': '16 AC'},
+            {'name': 'Potion of Healing', 'item_type': 'Potion', 'description': 'Restores 2d4 + 2 HP'},
+            {'name': 'Rope (50ft)', 'item_type': 'Adventuring Gear', 'description': 'Hempen rope.'},
+            {'name': 'Torch', 'item_type': 'Adventuring Gear', 'description': 'Provides light for 1 hour.'},
+        ]
+        equipment_objs = [get_or_create(Equipment, name=e['name'], defaults=e)[0] for e in equipment_data]
+
+        # 6. Spells
+        spells_data = [
+            {'name': 'Fireball', 'level': 3, 'school': 'Evocation', 'casting_time': '1 Action', 'range_val': '150 ft', 'components': 'V, S, M', 'duration': 'Instantaneous', 'description': 'A bright streak flashes...'},
+            {'name': 'Cure Wounds', 'level': 1, 'school': 'Evocation', 'casting_time': '1 Action', 'range_val': 'Touch', 'components': 'V, S', 'duration': 'Instantaneous', 'description': 'Heals 1d8 + Mod.'},
+            {'name': 'Magic Missile', 'level': 1, 'school': 'Evocation', 'casting_time': '1 Action', 'range_val': '120 ft', 'components': 'V, S', 'duration': 'Instantaneous', 'description': '3 darts of force.'},
+            {'name': 'Shield', 'level': 1, 'school': 'Abjuration', 'casting_time': '1 Reaction', 'range_val': 'Self', 'components': 'V, S', 'duration': '1 Round', 'description': '+5 AC.'},
+            {'name': 'Healing Word', 'level': 1, 'school': 'Evocation', 'casting_time': '1 Bonus Action', 'range_val': '60 ft', 'components': 'V', 'duration': 'Instantaneous', 'description': 'Heals 1d4 + Mod.'},
+        ]
+        for spell in spells_data:
+            get_or_create(Spell, name=spell['name'], defaults=spell)
+
+        # 7. Feats
+        feats_data = [
+            {'name': 'Alert', 'description': '+5 Initiative.'},
+            {'name': 'Mobile', 'description': '+10 ft Speed.'},
+            {'name': 'Sharpshooter', 'description': 'No disadvantage at long range. -5 atk/+10 dmg.'},
+            {'name': 'Great Weapon Master', 'description': 'On your turn, when you score a critical hit with a melee weapon or reduce a creature to 0 hit points, you can make one melee weapon attack as a bonus action.'},
+        ]
+        for feat in feats_data:
+            get_or_create(Feat, name=feat['name'], defaults=feat)
+        
+        # Ensure Seed User and Character Check
+        user, _ = get_or_create(User, username='seed_user')
+        if not user.password_hash:
+            user.set_password('password')
+            db.session.commit()
+            
+        print("Database seeding check complete.")
         # Check for Traits (checking if Elf has traits for simplicity)
         elf_race = Race.query.filter_by(name='Elf').first()
         if elf_race and not Trait.query.filter_by(race_id=elf_race.id).first():
@@ -692,6 +677,7 @@ def add_dnd_info():
             return jsonify({'error': f'Failed to create background: {str(e)}'}), 400
     elif info_type == 'equipment':
         item_type = data.get('item_type')
+        # Original logic for adding equipment
         if item_type == 'Weapon':
             damage_dice = data.get('damage_dice')
             damage_type = data.get('damage_type')
