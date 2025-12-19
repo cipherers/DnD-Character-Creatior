@@ -139,7 +139,6 @@ Response: { "message": "DND information added successfully" }
 | Charisma Bonus | charisma_bonus |
 
 ## 17. Future Improvements
-- Character edit screen
 - Export to JSON
 - Dice roll history panel
 - UI polish (Tailwind components)
