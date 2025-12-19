@@ -6,6 +6,11 @@ from flask import session
 # Make sure all your model definitions are in a file named 'models.py'
 # and import them here.
 from models import db, Character, Race, Class, Background, Skill, Equipment, User
+import json
+import io
+from flask import send_file
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 # --- Flask Application Setup ---
 # The template_folder is set to 'Front-end' to find index.html
@@ -612,6 +617,155 @@ def update_character_currency():
     db.session.commit()
 
     return jsonify({'message': 'Currency updated successfully'})
+
+@app.route('/download-character/json/<int:character_id>')
+def download_character_json(character_id):
+    if 'user_id' not in session:
+        flash('You must be logged in to download characters.')
+        return redirect(url_for('login'))
+    
+    char = Character.query.get_or_404(character_id)
+    if char.user_id != session['user_id']:
+        return "Unauthorized", 403
+
+    char_data = {
+        'name': char.name,
+        'age': char.age,
+        'level': char.level,
+        'alignment': char.alignment,
+        'hp': char.hp,
+        'race': char.race.name if char.race else None,
+        'class': char.character_class.name if char.character_class else None,
+        'background': char.background.name if char.background else None,
+        'abilities': {
+            'strength': char.strength,
+            'dexterity': char.dexterity,
+            'constitution': char.constitution,
+            'intelligence': char.intelligence,
+            'wisdom': char.wisdom,
+            'charisma': char.charisma
+        },
+        'currency': {
+            'copper': char.copper_pieces,
+            'silver': char.silver_pieces,
+            'gold': char.gold_pieces,
+            'electrum': char.electrum_pieces,
+            'platinum': char.platinum_pieces
+        },
+        'proficiencies': [s.name for s in char.proficiencies],
+        'inventory': [e.name for e in char.inventory]
+    }
+
+    # Create a JSON file in memory
+    json_str = json.dumps(char_data, indent=4)
+    mem = io.BytesIO()
+    mem.write(json_str.encode('utf-8'))
+    mem.seek(0)
+
+    return send_file(
+        mem,
+        as_attachment=True,
+        download_name=f"{char.name.replace(' ', '_')}.json",
+        mimetype='application/json'
+    )
+
+@app.route('/download-character/pdf/<int:character_id>')
+def download_character_pdf(character_id):
+    if 'user_id' not in session:
+        flash('You must be logged in to download characters.')
+        return redirect(url_for('login'))
+        
+    char = Character.query.get_or_404(character_id)
+    if char.user_id != session['user_id']:
+        return "Unauthorized", 403
+
+    # Create a PDF in memory
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    # Title
+    c.setFont("Helvetica-Bold", 24)
+    c.drawString(50, height - 50, f"Character Sheet: {char.name}")
+
+    # Basic Info
+    c.setFont("Helvetica", 12)
+    y = height - 80
+    c.drawString(50, y, f"Class: {char.character_class.name if char.character_class else 'None'}")
+    y -= 20
+    c.drawString(50, y, f"Race: {char.race.name if char.race else 'None'}")
+    y -= 20
+    c.drawString(50, y, f"Level: {char.level}")
+    y -= 20
+    c.drawString(50, y, f"Background: {char.background.name if char.background else 'None'}")
+    y -= 20
+    c.drawString(50, y, f"Alignment: {char.alignment}")
+    y -= 20
+    c.drawString(50, y, f"HP: {char.hp}")
+    
+    # Ability Scores
+    y -= 40
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(50, y, "Ability Scores")
+    c.setFont("Helvetica", 12)
+    y -= 20
+    abilities = [
+        ('Strength', char.strength), ('Dexterity', char.dexterity),
+        ('Constitution', char.constitution), ('Intelligence', char.intelligence),
+        ('Wisdom', char.wisdom), ('Charisma', char.charisma)
+    ]
+    for name, score in abilities:
+        c.drawString(50, y, f"{name}: {score}")
+        y -= 15
+
+    # Currency
+    y -= 25
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(50, y, "Currency")
+    c.setFont("Helvetica", 12)
+    y -= 20
+    c.drawString(50, y, f"Platinum: {char.platinum_pieces} | Gold: {char.gold_pieces} | Electrum: {char.electrum_pieces}")
+    y -= 15
+    c.drawString(50, y, f"Silver: {char.silver_pieces} | Copper: {char.copper_pieces}")
+
+    # Skills
+    y -= 40
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(50, y, "Proficiencies / Skills")
+    c.setFont("Helvetica", 12)
+    y -= 20
+    for skill in char.proficiencies:
+        if y < 50: # New page if running out of space
+            c.showPage()
+            y = height - 50
+        c.drawString(50, y, f"- {skill.name}")
+        y -= 15
+
+    # Equipment
+    y -= 25
+    if y < 100:
+        c.showPage()
+        y = height - 50
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(50, y, "Equipment")
+    c.setFont("Helvetica", 12)
+    y -= 20
+    for item in char.inventory:
+        if y < 50:
+            c.showPage()
+            y = height - 50
+        c.drawString(50, y, f"- {item.name} ({item.item_type})")
+        y -= 15
+
+    c.save()
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f"{char.name.replace(' ', '_')}.pdf",
+        mimetype='application/pdf'
+    )
 
 # --- Run the Application ---
 if __name__ == '__main__':

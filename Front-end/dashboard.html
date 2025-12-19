@@ -103,8 +103,12 @@
                                         <div class="text-sm text-gray-500">Level {{ char.level }} • Age {{ char.age }}</div>
                                     </div>
                                 </div>
-                                <!-- Add Edit Button to Character Card -->
-                                <button class="btn btn-secondary edit-character-btn mt-2" data-id="{{ char.id }}">Edit Character</button>
+                                <!-- Add Edit Button and Download Buttons to Character Card -->
+                                <div class="mt-2 flex gap-2 flex-wrap">
+                                    <button class="btn btn-secondary edit-character-btn text-sm" data-id="{{ char.id }}">Edit Character</button>
+                                    <a href="{{ url_for('download_character_json', character_id=char.id) }}" class="btn bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1.5 rounded">JSON</a>
+                                    <a href="{{ url_for('download_character_pdf', character_id=char.id) }}" class="btn bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded">PDF</a>
+                                </div>
                             </li>
                         {% endfor %}
                         </ul>
