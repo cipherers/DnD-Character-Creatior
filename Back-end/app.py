@@ -21,7 +21,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # --- Flask Application Setup ---
 # The template_folder is set to 'Front-end' to find index.html
-app = Flask(__name__, template_folder='../Front-end')
+app = Flask(__name__, template_folder='../Front-end', static_folder='../Front-end/static')
 # Configure the SQLite database. This will create a file called 'site.db'
 # in the same directory as this script.
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
@@ -863,80 +863,200 @@ def download_character_pdf(character_id):
     # Create a PDF in memory
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
+    width, height = letter # 612 x 792
 
-    # Title
-    c.setFont("Helvetica-Bold", 24)
-    c.drawString(50, height - 50, f"Character Sheet: {char.name}")
+    # --- Helper Functions ---
+    def draw_border(canvas):
+        # Draw a decorative border
+        canvas.setLineWidth(2)
+        canvas.setStrokeColorRGB(0.36, 0.25, 0.20) # Brown
+        canvas.rect(20, 20, width - 40, height - 40)
+        canvas.setLineWidth(1)
+        canvas.rect(24, 24, width - 48, height - 48)
 
-    # Basic Info
-    c.setFont("Helvetica", 12)
-    y = height - 80
-    c.drawString(50, y, f"Class: {char.character_class.name if char.character_class else 'None'}")
-    y -= 20
-    c.drawString(50, y, f"Race: {char.race.name if char.race else 'None'}")
-    y -= 20
-    c.drawString(50, y, f"Level: {char.level}")
-    y -= 20
-    c.drawString(50, y, f"Background: {char.background.name if char.background else 'None'}")
-    y -= 20
-    c.drawString(50, y, f"Alignment: {char.alignment}")
-    y -= 20
-    c.drawString(50, y, f"HP: {char.hp}")
-    
-    # Ability Scores
-    y -= 40
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, y, "Ability Scores")
-    c.setFont("Helvetica", 12)
-    y -= 20
-    abilities = [
-        ('Strength', char.strength), ('Dexterity', char.dexterity),
-        ('Constitution', char.constitution), ('Intelligence', char.intelligence),
-        ('Wisdom', char.wisdom), ('Charisma', char.charisma)
-    ]
-    for name, score in abilities:
-        c.drawString(50, y, f"{name}: {score}")
-        y -= 15
+    def draw_header(canvas, y_pos):
+        canvas.setFont("Times-Bold", 28)
+        canvas.setFillColorRGB(0.55, 0, 0) # Dark Red
+        canvas.drawCentredString(width / 2, y_pos, "CHARACTER SHEET")
+        
+        y_pos -= 30
+        canvas.setFont("Times-Roman", 12)
+        canvas.setFillColorRGB(0, 0, 0)
+        
+        # Info Grid
+        start_x = 50
+        col_width = 170
+        
+        # Row 1
+        canvas.drawString(start_x, y_pos, f"Name: {char.name}")
+        canvas.drawString(start_x + col_width, y_pos, f"Class: {char.character_class.name} ({char.level})")
+        canvas.drawString(start_x + 2 * col_width, y_pos, f"Background: {char.background.name if char.background else '-'}")
+        
+        y_pos -= 20
+        # Row 2
+        canvas.drawString(start_x, y_pos, f"Race: {char.race.name}")
+        canvas.drawString(start_x + col_width, y_pos, f"Alignment: {char.alignment}")
+        canvas.drawString(start_x + 2 * col_width, y_pos, f"Player: {char.user.username}")
+        
+        return y_pos - 30
 
-    # Currency
-    y -= 25
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, y, "Currency")
-    c.setFont("Helvetica", 12)
-    y -= 20
-    c.drawString(50, y, f"Platinum: {char.platinum_pieces} | Gold: {char.gold_pieces} | Electrum: {char.electrum_pieces}")
-    y -= 15
-    c.drawString(50, y, f"Silver: {char.silver_pieces} | Copper: {char.copper_pieces}")
+    def draw_attributes(canvas, y_pos):
+        canvas.setFont("Times-Bold", 16)
+        canvas.setFillColorRGB(0.36, 0.25, 0.20)
+        canvas.drawString(50, y_pos, "ABILITY SCORES")
+        y_pos -= 10
+        
+        # Draw boxes for attributes
+        stats = [
+            ("STR", char.strength), ("DEX", char.dexterity), ("CON", char.constitution),
+            ("INT", char.intelligence), ("WIS", char.wisdom), ("CHA", char.charisma)
+        ]
+        
+        box_width = 50
+        box_height = 60
+        gap = 40
+        start_x = 55
+        
+        for i, (label, value) in enumerate(stats):
+            x = start_x + i * (box_width + gap)
+            # Box
+            canvas.setStrokeColorRGB(0.36, 0.25, 0.20)
+            canvas.rect(x, y_pos - box_height, box_width, box_height)
+            
+            # Label
+            canvas.setFont("Times-Bold", 10)
+            canvas.drawCentredString(x + box_width/2, y_pos - 12, label)
+            
+            # Value
+            canvas.setFont("Times-Bold", 18)
+            canvas.drawCentredString(x + box_width/2, y_pos - 34, str(value))
+            
+            # Modifier
+            mod = (value - 10) // 2
+            mod_str = f"+{mod}" if mod >= 0 else str(mod)
+            canvas.setFont("Times-Roman", 10)
+            canvas.drawCentredString(x + box_width/2, y_pos - 52, mod_str)
+            
+        return y_pos - box_height - 30
 
-    # Skills
-    y -= 40
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, y, "Proficiencies / Skills")
-    c.setFont("Helvetica", 12)
-    y -= 20
-    for skill in char.proficiencies:
-        if y < 50: # New page if running out of space
-            c.showPage()
-            y = height - 50
-        c.drawString(50, y, f"- {skill.name}")
-        y -= 15
+    def draw_vitals(canvas, y_pos):
+        # AC, HP, Speed, etc.
+        canvas.setFont("Times-Bold", 16)
+        canvas.setFillColorRGB(0.36, 0.25, 0.20)
+        canvas.drawString(50, y_pos, "VITALS")
+        y_pos -= 10
+        
+        # Simple boxes
+        # AC
+        canvas.rect(50, y_pos - 50, 60, 50)
+        canvas.setFont("Times-Bold", 10)
+        canvas.drawCentredString(80, y_pos - 12, "ARMOR")
+        canvas.drawCentredString(80, y_pos - 22, "CLASS")
+        canvas.setFont("Times-Bold", 20)
+        # Calculate AC (Base 10 + Dex + Armor? Just simplified 10 + Dex for now or assume logic elsewhere)
+        # We don't have equipped logic fully calculated in backend model property, so let's just do 10 + Dex Mod 
+        ac = 10 + ((char.dexterity - 10) // 2) 
+        # Scan inventory for armor? (Optional enhancement later)
+        canvas.drawCentredString(80, y_pos - 42, str(ac))
+        
+        # HP
+        canvas.rect(130, y_pos - 50, 80, 50)
+        canvas.setFont("Times-Bold", 10)
+        canvas.drawCentredString(170, y_pos - 12, "HIT POINTS")
+        canvas.setFont("Times-Bold", 20)
+        canvas.drawCentredString(170, y_pos - 40, f"{char.hp} / {char.hp}")
+        
+        # Speed (Generic 30 for now)
+        canvas.rect(230, y_pos - 50, 60, 50)
+        canvas.setFont("Times-Bold", 10)
+        canvas.drawCentredString(260, y_pos - 12, "SPEED")
+        canvas.setFont("Times-Bold", 20)
+        canvas.drawCentredString(260, y_pos - 40, "30ft")
 
-    # Equipment
-    y -= 25
-    if y < 100:
-        c.showPage()
-        y = height - 50
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, y, "Equipment")
-    c.setFont("Helvetica", 12)
-    y -= 20
-    for item in char.inventory:
-        if y < 50:
-            c.showPage()
-            y = height - 50
-        c.drawString(50, y, f"- {item.name} ({item.item_type})")
-        y -= 15
+        return y_pos - 70
+
+    def draw_columns(canvas, y_pos):
+        # We will split remaining space into two columns: Skills/Profs vs Inventory/Spells
+        col_1_x = 50
+        col_2_x = 320
+        col_width = 240
+        
+        start_y = y_pos
+        
+        # --- Column 1: Proficiencies & Skills ---
+        canvas.setFont("Times-Bold", 14)
+        canvas.setFillColorRGB(0, 0, 0)
+        canvas.drawString(col_1_x, y_pos, "PROFICIENCIES & SKILLS")
+        y_pos -= 20
+        
+        canvas.setFont("Times-Roman", 11)
+        # Proficiency Bonus (Level based)
+        prof_bonus = 2 + (char.level - 1) // 4
+        canvas.drawString(col_1_x, y_pos, f"Proficiency Bonus: +{prof_bonus}")
+        y_pos -= 15
+        
+        canvas.line(col_1_x, y_pos + 5, col_1_x + col_width, y_pos + 5)
+        y_pos -= 10
+        
+        # List Skills
+        skills = sorted([s.name for s in char.proficiencies])
+        if not skills:
+            canvas.drawString(col_1_x, y_pos, "(None)")
+            y_pos -= 15
+        else:
+            for skill in skills:
+                canvas.drawString(col_1_x + 10, y_pos, f"• {skill}")
+                y_pos -= 15
+                
+        # --- Column 2: Equipment & Spells ---
+        y_pos_2 = start_y
+        canvas.setFont("Times-Bold", 14)
+        canvas.drawString(col_2_x, y_pos_2, "EQUIPMENT")
+        y_pos_2 -= 20
+        
+        canvas.setFont("Times-Roman", 11)
+        inventory = sorted([f"{i.name} ({i.item_type})" for i in char.inventory])
+        if not inventory:
+            canvas.drawString(col_2_x, y_pos_2, "(Empty)")
+            y_pos_2 -= 15
+        else:
+            for item in inventory:
+                if y_pos_2 < 100: # Simple pagination check
+                    canvas.drawString(col_2_x, y_pos_2, "... (more on next page)")
+                    break
+                canvas.drawString(col_2_x + 10, y_pos_2, f"• {item}")
+                y_pos_2 -= 15
+                
+        # Coin Pounch
+        y_pos_2 -= 10
+        canvas.setFont("Times-Bold", 12)
+        canvas.drawString(col_2_x, y_pos_2, "COIN POUCH")
+        y_pos_2 -= 15
+        canvas.setFont("Times-Roman", 11)
+        coins = f"{char.gold_pieces}gp, {char.silver_pieces}sp, {char.copper_pieces}cp"
+        canvas.drawString(col_2_x + 10, y_pos_2, coins)
+        y_pos_2 -= 25
+
+        # Spells
+        if char.spells:
+            canvas.setFont("Times-Bold", 14)
+            canvas.drawString(col_2_x, y_pos_2, "SPELLS KNOWN")
+            y_pos_2 -= 20
+            canvas.setFont("Times-Roman", 11)
+            spells = sorted([f"{s.name} (Lvl {s.level})" for s in char.spells])
+            for spell in spells:
+                if y_pos_2 < 50:
+                    break
+                canvas.drawString(col_2_x + 10, y_pos_2, f"• {spell}")
+                y_pos_2 -= 15
+
+    # --- Draw Page 1 ---
+    draw_border(c)
+    y = height - 50
+    y = draw_header(c, y)
+    y = draw_attributes(c, y)
+    y = draw_vitals(c, y)
+    draw_columns(c, y)
 
     c.save()
     buffer.seek(0)

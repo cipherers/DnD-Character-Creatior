@@ -51,16 +51,19 @@
                                 data-wis="{{ char.wisdom }}" data-cha="{{ char.charisma }}"
                                 data-image="{{ char.image_path }}">
 
+                                <!-- Portrait Thumbnail -->
                                 <div
-                                    class="character-thumb-dnd w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-gray-200">
+                                    class="w-16 h-16 rounded-full overflow-hidden border-2 border-[#d4af37] flex-shrink-0 bg-[#2c1810]">
                                     {% if char.image_path %}
-                                    <img src="/{{ char.image_path }}" alt="{{ char.name }}"
+                                    <img src="{{ char.image_path }}" alt="{{ char.name }}"
                                         class="w-full h-full object-cover">
                                     {% else %}
-                                    <img src="https://api.dicebear.com/7.x/adventurer/svg?seed={{ char.name|urlencode }}"
-                                        alt="{{ char.name }}" class="w-full h-full object-cover">
+                                    <img src="https://api.dicebear.com/7.x/adventurer/svg?seed={{ char.name }}"
+                                        alt="{{ char.name }}" class="w-full h-full object-cover opactiy-80">
                                     {% endif %}
                                 </div>
+
+
 
                                 <div class="flex-1">
                                     <div class="flex justify-between items-start">
@@ -293,13 +296,14 @@
                 </div>
 
                 <div class="border-t border-[#5c4033] pt-4 mt-4">
-                    <label class="block font-bold mb-2">Portrait</label>
-                    <div class="flex items-center gap-2">
-                        <input type="file" id="portrait-upload" accept="image/*" class="text-sm">
+                    <label class="block font-bold mb-2 text-[#8b0000]">Update Portrait</label>
+                    <div class="flex items-center gap-2 bg-[#eaddcf] p-2 rounded border border-[#c2b280]">
+                        <input type="file" id="portrait-upload" accept="image/*"
+                            class="text-xs flex-1 text-[#5c4033 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#8b0000] file:text-[#d4af37] hover:file:bg-[#600000]">
                         <button type="button" id="upload-btn"
-                            class="btn-dnd btn-secondary-dnd text-xs py-1 px-2">Upload</button>
+                            class="btn-dnd btn-primary-dnd text-xs py-1 px-3 shadow-sm hover:shadow-md transition-shadow">Upload</button>
                     </div>
-                    <p id="upload-status" class="text-xs mt-1"></p>
+                    <p id="upload-status" class="text-xs mt-1 text-center italic text-[#5c4033]"></p>
                 </div>
 
                 <div class="flex gap-4 mt-6">

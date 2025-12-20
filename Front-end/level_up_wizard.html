@@ -9,14 +9,51 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dnd-theme.css') }}">
     <style>
         .step-active {
-            color: var(--accent-red);
+            color: var(--accent-gold);
             font-weight: bold;
-            border-bottom: 2px solid var(--accent-red);
+            text-shadow: 0 0 5px rgba(139, 0, 0, 0.5);
         }
 
         .step-inactive {
             color: var(--border-brown);
             opacity: 0.5;
+        }
+
+        .step-indicator-wrapper {
+            position: relative;
+            z-index: 10;
+        }
+
+        .step-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--bg-parchment);
+            border: 2px solid var(--border-brown);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .step-active .step-circle {
+            background-color: var(--accent-red);
+            color: var(--accent-gold);
+            border-color: var(--accent-gold);
+            transform: scale(1.1);
+        }
+
+        .step-line {
+            position: absolute;
+            top: 16px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--border-brown);
+            opacity: 0.3;
+            z-index: 0;
         }
     </style>
 </head>
@@ -28,12 +65,31 @@
         </p>
 
         <!-- Progress Steps -->
-        <div
-            class="flex justify-between mb-8 text-sm font-serif uppercase tracking-widest border-b border-[#5c4033] border-opacity-30 pb-2">
-            <div id="step-indicator-1" class="step-active">1. Vitality</div>
-            <div id="step-indicator-2" class="step-inactive">2. Features</div>
-            <div id="step-indicator-3" class="step-inactive">3. Magic</div>
-            <div id="step-indicator-4" class="step-inactive">4. Confirm</div>
+        <!-- Progress Steps -->
+        <div class="relative mb-8">
+            <div class="step-line"></div>
+            <div class="flex justify-between relative z-10 px-4">
+                <!-- Step 1 -->
+                <div id="step-indicator-1" class="step-active flex flex-col items-center">
+                    <div class="step-circle">1</div>
+                    <span class="text-xs uppercase tracking-widest font-serif">Vitality</span>
+                </div>
+                <!-- Step 2 -->
+                <div id="step-indicator-2" class="step-inactive flex flex-col items-center">
+                    <div class="step-circle">2</div>
+                    <span class="text-xs uppercase tracking-widest font-serif">Features</span>
+                </div>
+                <!-- Step 3 -->
+                <div id="step-indicator-3" class="step-inactive flex flex-col items-center">
+                    <div class="step-circle">3</div>
+                    <span class="text-xs uppercase tracking-widest font-serif">Magic</span>
+                </div>
+                <!-- Step 4 -->
+                <div id="step-indicator-4" class="step-inactive flex flex-col items-center">
+                    <div class="step-circle">4</div>
+                    <span class="text-xs uppercase tracking-widest font-serif">Confirm</span>
+                </div>
+            </div>
         </div>
 
         <form id="level-up-form" class="flex-1 flex flex-col">
