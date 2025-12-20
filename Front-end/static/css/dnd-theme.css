@@ -1,0 +1,172 @@
+/* Google Fonts Import */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Lato:ital,wght@0,400;0,700;1,400&display=swap');
+
+:root {
+    --bg-parchment: #f4e4bc;
+    --text-ink: #2c1810;
+    --accent-red: #8b0000;
+    --accent-gold: #d4af37;
+    --border-brown: #5c4033;
+    --bg-paper: #fffef0;
+    --shadow-soft: 0 4px 6px -1px rgba(44, 24, 16, 0.2), 0 2px 4px -1px rgba(44, 24, 16, 0.1);
+}
+
+body {
+    font-family: 'Lato', sans-serif;
+    background-color: var(--bg-parchment);
+    color: var(--text-ink);
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Cinzel', serif;
+    color: var(--accent-red);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Header & Nav */
+header {
+    background: linear-gradient(to bottom, #2c1810, #1a0f0a) !important;
+    border-bottom: 3px solid var(--accent-gold);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+nav a {
+    color: var(--accent-gold) !important;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+nav a:hover {
+    color: #fff !important;
+    text-shadow: 0 0 8px var(--accent-gold);
+    text-decoration: none !important;
+}
+
+/* Containers */
+.parchment-box {
+    background-color: var(--bg-paper);
+    border: 2px solid var(--border-brown);
+    border-radius: 4px;
+    box-shadow: 
+        inset 0 0 40px rgba(92, 64, 51, 0.1),
+        0 10px 20px rgba(0,0,0,0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Corner embellishments (pseudo-elements if needed, or simple borders) */
+.parchment-box::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border: 1px solid var(--accent-gold);
+    margin: 4px;
+    border-radius: 2px;
+}
+
+/* Forms */
+label {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    color: var(--border-brown);
+}
+
+.form-input-dnd {
+    background-color: transparent !important;
+    border: none !important;
+    border-bottom: 2px solid var(--border-brown) !important;
+    border-radius: 0 !important;
+    font-family: 'Lato', sans-serif;
+    color: var(--text-ink) !important;
+    padding: 0.5rem 0 !important;
+    transition: border-color 0.3s ease;
+    box-shadow: none !important;
+}
+
+.form-input-dnd:focus {
+    outline: none !important;
+    border-bottom-color: var(--accent-red) !important;
+    background-color: rgba(212, 175, 55, 0.05) !important;
+}
+
+select.form-input-dnd {
+    background-image: none; /* Removing default arrow if possible or style it */
+    cursor: pointer;
+}
+
+/* Buttons */
+.btn-dnd {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border: 2px solid var(--border-brown);
+    border-radius: 4px;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary-dnd {
+    background-color: var(--accent-red);
+    color: var(--accent-gold);
+    border-color: var(--text-ink);
+}
+
+.btn-primary-dnd:hover {
+    background-color: #600000;
+    color: #fff;
+    box-shadow: 0 0 15px rgba(139, 0, 0, 0.4);
+}
+
+.btn-secondary-dnd {
+    background-color: var(--border-brown);
+    color: var(--bg-parchment);
+    border-color: var(--text-ink);
+}
+
+.btn-secondary-dnd:hover {
+    background-color: #3e2b22;
+    color: #fff;
+}
+
+/* Custom Checkbox style */
+.form-checkbox {
+    accent-color: var(--accent-red);
+    height: 1.25rem;
+    width: 1.25rem;
+}
+
+/* Layout Utilities */
+.hr-dnd {
+    border: 0;
+    height: 1px;
+    background-image: linear-gradient(to right, rgba(92, 64, 51, 0), rgba(92, 64, 51, 0.75), rgba(92, 64, 51, 0));
+    margin: 2rem 0;
+}
+
+/* Character Cards (Dashboard) */
+.stat-card-dnd {
+    background-color: #fff;
+    border: 1px solid var(--border-brown);
+    border-radius: 8px; /* Slightly rounded */
+    box-shadow: 2px 2px 0 rgba(92, 64, 51, 0.2);
+}
+
+.character-thumb-dnd {
+    border: 2px solid var(--accent-gold);
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+
+/* Tooltips / Alerts */
+.alert-dnd {
+    border: 1px solid var(--accent-gold);
+    background-color: #2c1810;
+    color: var(--bg-parchment);
+    font-family: 'Cinzel', serif;
+}

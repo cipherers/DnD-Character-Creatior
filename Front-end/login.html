@@ -1,74 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title>Login / Register</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            color: #374151;
-        }
-        .form-container {
-            background-color: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        .form-input {
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 0.75rem;
-            width: 100%;
-            transition: border-color 0.2s ease;
-        }
-        .form-input:focus {
-            outline: none;
-            border-color: #4f46e5;
-        }
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            color: #ffffff;
-            transition: background-color 0.2s ease;
-        }
-        .btn-primary {
-            background-color: #4f46e5;
-        }
-        .btn-primary:hover {
-            background-color: #4338ca;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dnd-theme.css') }}">
 </head>
+
 <body class="flex items-center justify-center min-h-screen p-4">
-    <div class="form-container p-8 md:p-10 w-full max-w-md">
-        <h1 class="text-3xl font-bold text-center mb-6">Login or Register</h1>
+    <div class="parchment-box p-8 md:p-12 w-full max-w-md">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold mb-2">Adventurer's Guild</h1>
+            <p class="text-sm opacity-60 italic" style="color: var(--border-brown);">Sign the ledger to continue...</p>
+            <div class="hr-dnd w-3/4 mx-auto"></div>
+        </div>
+
         {% with messages = get_flashed_messages() %}
-            {% if messages %}
-            <ul class="mb-4">
+        {% if messages %}
+        <ul class="mb-6">
             {% for message in messages %}
-                <li class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative">{{ message }}</li>
+            <li class="alert-dnd px-4 py-3 rounded relative mb-2 text-center text-sm shadow-sm">{{ message }}</li>
             {% endfor %}
-            </ul>
-            {% endif %}
+        </ul>
+        {% endif %}
         {% endwith %}
+
         <form action="{{ url_for('login') }}" method="post" class="space-y-6">
             <div>
-                <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
-                <input type="text" id="username" name="username" class="mt-1 form-input" required>
+                <label for="username" class="block mb-1">Username</label>
+                <input type="text" id="username" name="username" class="w-full form-input-dnd" placeholder="Hero Name"
+                    required>
             </div>
             <div>
-                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                <input type="password" id="password" name="password" class="mt-1 form-input" required>
+                <label for="password" class="block mb-1">Password</label>
+                <input type="password" id="password" name="password" class="w-full form-input-dnd"
+                    placeholder="Secret Rune" required>
             </div>
-            <button type="submit" class="btn btn-primary w-full">Login / Register</button>
+            <button type="submit" class="btn-dnd btn-primary-dnd w-full shadow-lg">Enter Realm</button>
         </form>
-        <div class="flex justify-center mt-6">
-            <a href="{{ url_for('add_dnd_info') }}" class="btn btn-primary">Add DND Information</a>
+
+        <div
+            class="flex justify-center mt-8 pt-4 border-t border-[#5c4033] border-opacity-20 text-xs text-center text-[#5c4033]">
+            <p>Only registered members may create characters.<br>New names are automatically inscribed.</p>
+        </div>
+
+        <div class="flex justify-center mt-4">
+            <a href="{{ url_for('add_dnd_info') }}"
+                class="text-xs uppercase hover:underline text-[#8b0000] font-bold tracking-widest">Admin: Add Game
+                Data</a>
         </div>
     </div>
 </body>
+
 </html>

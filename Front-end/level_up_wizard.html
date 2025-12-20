@@ -4,67 +4,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Level Up Wizard - {{ character.name }}</title>
+    <title>Level Up - {{ character.name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dnd-theme.css') }}">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        .step-active {
+            color: var(--accent-red);
+            font-weight: bold;
+            border-bottom: 2px solid var(--accent-red);
+        }
 
-        body {
-            font-family: 'Inter', sans-serif;
+        .step-inactive {
+            color: var(--border-brown);
+            opacity: 0.5;
         }
     </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl p-8">
-        <h1 class="text-3xl font-bold mb-6 text-center">Level Up: {{ character.name }}</h1>
-        <p class="text-center text-gray-500 mb-8">Advancing to Level {{ character.level + 1 }}</p>
+<body class="flex items-center justify-center min-h-screen p-4 pt-24">
+    <div class="parchment-box p-8 md:p-12 w-full max-w-2xl min-h-[500px] flex flex-col">
+        <h1 class="text-3xl font-bold mb-2 text-center">Level Up</h1>
+        <p class="text-center italic mb-6 text-[#5c4033]">{{ character.name }} reaches Level {{ character.level + 1 }}!
+        </p>
 
         <!-- Progress Steps -->
-        <div class="flex justify-between mb-8 border-b pb-4">
-            <div id="step-indicator-1" class="font-bold text-blue-600">1. HP</div>
-            <div id="step-indicator-2" class="text-gray-400">2. Features</div>
-            <div id="step-indicator-3" class="text-gray-400">3. Spells</div>
-            <div id="step-indicator-4" class="text-gray-400">4. Review</div>
+        <div
+            class="flex justify-between mb-8 text-sm font-serif uppercase tracking-widest border-b border-[#5c4033] border-opacity-30 pb-2">
+            <div id="step-indicator-1" class="step-active">1. Vitality</div>
+            <div id="step-indicator-2" class="step-inactive">2. Features</div>
+            <div id="step-indicator-3" class="step-inactive">3. Magic</div>
+            <div id="step-indicator-4" class="step-inactive">4. Confirm</div>
         </div>
 
-        <form id="level-up-form">
+        <form id="level-up-form" class="flex-1 flex flex-col">
             <input type="hidden" name="character_id" value="{{ character.id }}">
             <input type="hidden" name="level" value="{{ character.level + 1 }}">
 
             <!-- Step 1: HP -->
-            <div id="step-1" class="step-content">
-                <h2 class="text-xl font-semibold mb-4">Increase Hit Points</h2>
-                <div class="mb-4">
-                    <label class="block text-gray-700 font-bold mb-2">New Max HP</label>
+            <div id="step-1" class="step-content flex-1">
+                <h2 class="text-xl font-bold mb-4">Increase Hit Points</h2>
+                <div class="bg-white bg-opacity-40 p-6 rounded border border-[#5c4033]">
+                    <label class="block font-bold mb-2">New Maximum HP</label>
                     <div class="flex items-center gap-4">
                         <input type="number" name="hp"
                             value="{{ character.hp + (character.character_class.hit_die // 2 + 1) }}"
-                            class="border rounded px-3 py-2 w-24">
-                        <span class="text-sm text-gray-500">(Suggested based on Class Hit Die)</span>
+                            class="form-input-dnd text-2xl w-24 text-center font-bold text-[#8b0000]">
+                        <span class="text-sm italic text-[#5c4033]">(Average: +{{ (character.character_class.hit_die //
+                            2 + 1) }})</span>
                     </div>
                 </div>
             </div>
 
             <!-- Step 2: Features (ASI / Feats) -->
-            <div id="step-2" class="step-content hidden">
-                <h2 class="text-xl font-semibold mb-4">Class Features & Feats</h2>
+            <div id="step-2" class="step-content hidden flex-1">
+                <h2 class="text-xl font-bold mb-4">Class Features</h2>
                 {% if (character.level + 1) % 4 == 0 %}
-                <div class="mb-4 bg-yellow-50 p-4 rounded border border-yellow-200">
-                    <h3 class="font-bold text-yellow-800">Ability Score Improvement</h3>
-                    <p class="text-sm text-yellow-700 mb-2">You reached a level divisible by 4! Choose an improvement.
-                    </p>
+                <div class="bg-[#eaddcf] p-6 rounded border border-[#c2b280]">
+                    <h3 class="font-bold text-[#8b0000] mb-2">Ability Score Improvement</h3>
+                    <p class="text-sm mb-4">You have reached a milestone. Choose your reward.</p>
+
                     <select name="ability_modification" id="ability-mod-select"
-                        class="border rounded px-3 py-2 w-full mb-2">
-                        <option value="">-- Select Bonus --</option>
-                        <option value="all_plus_one">All Stats +1</option>
-                        <option value="single_plus_two">One Stat +2</option>
-                        <option value="feat">Choose a Feat</option>
+                        class="form-input-dnd w-full mb-4 font-bold">
+                        <option value="">-- Select Improvement --</option>
+                        <option value="all_plus_one">+1 to All Abilities</option>
+                        <option value="single_plus_two">+2 to One Ability</option>
+                        <option value="feat">Learn a Feat</option>
                     </select>
 
-                    <div id="single-ability-choice" class="hidden mt-2">
-                        <label class="block text-sm">Select Stat:</label>
-                        <select name="selected_ability" class="border rounded px-3 py-2 w-full">
+                    <div id="single-ability-choice" class="hidden">
+                        <label class="block text-sm font-bold mb-1">Select Ability</label>
+                        <select name="selected_ability" class="form-input-dnd w-full">
                             <option value="strength">Strength</option>
                             <option value="dexterity">Dexterity</option>
                             <option value="constitution">Constitution</option>
@@ -74,48 +83,48 @@
                         </select>
                     </div>
 
-                    <div id="feat-choice" class="hidden mt-2">
-                        <label class="block text-sm">Select Feat:</label>
-                        <select name="feats" id="feat-select" class="border rounded px-3 py-2 w-full">
+                    <div id="feat-choice" class="hidden">
+                        <label class="block text-sm font-bold mb-1">Select Feat</label>
+                        <select name="feats" id="feat-select" class="form-input-dnd w-full mb-2">
                             <!-- Populated by JS -->
                         </select>
-                        <p id="feat-desc" class="text-sm text-gray-600 mt-1 italic"></p>
+                        <p id="feat-desc"
+                            class="text-sm italic p-2 border border-[#5c4033] rounded bg-white bg-opacity-50"></p>
                     </div>
                 </div>
                 {% else %}
-                <p class="text-gray-500">No major feature choices for this level.</p>
+                <div class="text-center p-8 opacity-60">
+                    <p>No Ability Score Improvements at this level.</p>
+                    <p class="text-sm">Your class abilities improve automatically.</p>
+                </div>
                 {% endif %}
             </div>
 
             <!-- Step 3: Spells -->
-            <div id="step-3" class="step-content hidden">
-                <h2 class="text-xl font-semibold mb-4">Learn New Spells</h2>
-                <p class="text-sm text-gray-500 mb-4">Select spells to add to your spellbook.</p>
-                <div class="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto" id="spells-list">
+            <div id="step-3" class="step-content hidden flex-1">
+                <h2 class="text-xl font-bold mb-4">Arcane Study</h2>
+                <div class="h-64 overflow-y-auto custom-scrollbar border border-[#5c4033] p-2 bg-white bg-opacity-40"
+                    id="spells-list">
                     <!-- Populated by JS -->
                 </div>
             </div>
 
             <!-- Step 4: Review -->
-            <div id="step-4" class="step-content hidden">
-                <h2 class="text-xl font-semibold mb-4">Review & Confirm</h2>
-                <div class="bg-gray-50 p-4 rounded text-sm space-y-2">
-                    <p><strong>New Level:</strong> {{ character.level + 1 }}</p>
-                    <!-- JS will populate summary here -->
-                    <div id="review-summary"></div>
+            <div id="step-4" class="step-content hidden flex-1">
+                <h2 class="text-xl font-bold mb-4">Confirm Ascension</h2>
+                <div class="p-6 rounded border border-[#5c4033] bg-white bg-opacity-30">
+                    <p class="text-lg"><strong>New Level:</strong> {{ character.level + 1 }}</p>
+                    <p class="italic text-sm mt-2 opacity-70">"With great power comes great responsibility..."</p>
                 </div>
             </div>
 
             <!-- Navigation -->
-            <div class="flex justify-between mt-8">
-                <button type="button" id="prev-btn"
-                    class="px-4 py-2 rounded border bg-white hover:bg-gray-50 hidden">Previous</button>
-                <div class="flex gap-2 ml-auto">
-                    <a href="/dashboard" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</a>
-                    <button type="button" id="next-btn"
-                        class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Next</button>
-                    <button type="submit" id="submit-btn"
-                        class="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 hidden">Level Up!</button>
+            <div class="flex justify-between mt-8 pt-4 border-t border-[#5c4033] border-opacity-20">
+                <button type="button" id="prev-btn" class="btn-dnd btn-secondary-dnd hidden">Back</button>
+                <div class="flex gap-4 ml-auto">
+                    <a href="/dashboard" class="btn-dnd btn-secondary-dnd opacity-50 hover:opacity-100">Cancel</a>
+                    <button type="button" id="next-btn" class="btn-dnd btn-primary-dnd">Next</button>
+                    <button type="submit" id="submit-btn" class="btn-dnd btn-primary-dnd hidden">Ascend!</button>
                 </div>
             </div>
         </form>
@@ -125,6 +134,9 @@
         document.addEventListener('DOMContentLoaded', async () => {
             let currentStep = 1;
             const totalSteps = 4;
+            const characterClass = "{{ character.character_class.name }}";
+            const spellcastingClasses = ["Wizard", "Sorcerer", "Cleric", "Warlock", "Bard", "Druid", "Paladin", "Ranger"];
+            const isSpellcaster = spellcastingClasses.some(c => characterClass.includes(c));
 
             // Fetch data
             const [featsRes, spellsRes] = await Promise.all([
@@ -133,12 +145,6 @@
             ]);
             const feats = await featsRes.json();
             const spells = await spellsRes.json();
-
-            // Check if character is a spellcaster
-            // We need the character's class name. It's rendered in the template, so let's pass it to JS.
-            const characterClass = "{{ character.character_class.name }}";
-            const spellcastingClasses = ["Wizard", "Sorcerer", "Cleric", "Warlock", "Bard", "Druid", "Paladin", "Ranger"];
-            const isSpellcaster = spellcastingClasses.some(c => characterClass.includes(c));
 
             // Populate Feats
             const featSelect = document.getElementById('feat-select');
@@ -152,34 +158,41 @@
                 });
                 featSelect.addEventListener('change', () => {
                     const feat = feats.find(f => f.id == featSelect.value);
-                    featDesc.textContent = feat ? feat.description : '';
+                    featDesc.textContent = feat ? feat.description : 'Select a feat to view details...';
                 });
+                featSelect.dispatchEvent(new Event('change')); // Trigger initial desc
             }
 
             // Populate Spells
             if (isSpellcaster) {
                 const spellsList = document.getElementById('spells-list');
+                const fragment = document.createDocumentFragment();
                 spells.forEach(s => {
                     const div = document.createElement('div');
-                    div.className = "flex items-start gap-2 p-2 border rounded hover:bg-gray-50";
+                    div.className = "flex items-start gap-2 p-2 border-b border-[#5c4033] border-opacity-20 hover:bg-[#8b0000] hover:bg-opacity-5 transition-colors cursor-pointer";
                     div.innerHTML = `
-                    <input type="checkbox" name="spells" value="${s.id}" id="spell-${s.id}">
-                    <div>
-                        <label for="spell-${s.id}" class="font-bold block">${s.name} (Lvl ${s.level})</label>
-                        <p class="text-xs text-gray-500">${s.description.substring(0, 60)}...</p>
+                    <input type="checkbox" name="spells" value="${s.id}" id="spell-${s.id}" class="form-checkbox mt-1 text-[#8b0000] focus:ring-[#d4af37]">
+                    <div class="flex-1">
+                        <label for="spell-${s.id}" class="font-bold block text-[#8b0000] cursor-pointer">${s.name} <span class="text-xs text-[#5c4033] font-normal">(Lvl ${s.level})</span></label>
+                        <p class="text-xs text-[#5c4033] italic">${s.description.substring(0, 60)}...</p>
                     </div>
-                `;
-                    spellsList.appendChild(div);
+                    `;
+                    // Allow clicking the div to toggle
+                    div.addEventListener('click', (e) => {
+                        if (e.target.type !== 'checkbox') {
+                            const cb = div.querySelector('input');
+                            cb.checked = !cb.checked;
+                        }
+                    });
+                    fragment.appendChild(div);
                 });
+                spellsList.appendChild(fragment);
             } else {
-                // Hide the step indicator or mark it as N/A? 
-                // For simpler logic, we just skip the step, but visual feedback is good.
-                document.getElementById('step-indicator-3').classList.add('hidden');
-                // Also hide the step 3 content wrapper just in case
-                document.getElementById('step-3').innerHTML = '<p class="text-center text-gray-500 mt-10">Not a spellcasting class.</p>';
+                document.getElementById('step-indicator-3').style.display = 'none'; // Completely hide if not relevant? Or maybe strike through.
+                // Actually logic handles skip.
             }
 
-            // UI Logic for Step 2
+            // Step 2 Logic
             const abiSelect = document.getElementById('ability-mod-select');
             if (abiSelect) {
                 abiSelect.addEventListener('change', () => {
@@ -200,17 +213,16 @@
                 // Update indicators
                 for (let i = 1; i <= totalSteps; i++) {
                     const el = document.getElementById(`step-indicator-${i}`);
-                    el.className = i === currentStep ? "font-bold text-blue-600" : "text-gray-400";
+                    if (el) {
+                        el.className = i === currentStep ? "step-active" : "step-inactive";
+                    }
                 }
             };
 
             document.getElementById('next-btn').addEventListener('click', () => {
                 if (currentStep < totalSteps) {
                     currentStep++;
-                    // Skip Spells step if not a spellcaster
-                    if (!isSpellcaster && currentStep === 3) {
-                        currentStep++;
-                    }
+                    if (!isSpellcaster && currentStep === 3) currentStep++;
                     updateStep();
                 }
             });
@@ -218,10 +230,7 @@
             document.getElementById('prev-btn').addEventListener('click', () => {
                 if (currentStep > 1) {
                     currentStep--;
-                    // Skip Spells step if not a spellcaster
-                    if (!isSpellcaster && currentStep === 3) {
-                        currentStep--;
-                    }
+                    if (!isSpellcaster && currentStep === 3) currentStep--;
                     updateStep();
                 }
             });
@@ -230,20 +239,12 @@
                 e.preventDefault();
                 const formData = new FormData(e.target);
                 try {
-                    const res = await fetch('/update-character', {
-                        method: 'POST',
-                        body: formData
-                    });
+                    const res = await fetch('/update-character', { method: 'POST', body: formData });
                     if (res.ok) {
-                        alert("Level up successful!");
+                        alert("Ascension Complete!");
                         window.location.href = '/dashboard';
-                    } else {
-                        alert("Error leveling up.");
-                    }
-                } catch (arr) {
-                    console.error(arr);
-                    alert("Network error.");
-                }
+                    } else alert("Review your choices... something went wrong.");
+                } catch (arr) { alert("The ley lines are blocked (Network Error)."); }
             });
         });
     </script>

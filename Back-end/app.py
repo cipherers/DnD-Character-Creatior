@@ -61,6 +61,15 @@ def get_class_skill_map():
         if allowed_names is None:
             # If no specific rules, allow all skills
             mapping[cls.name] = [s.id for s in Skill.query.all()]
+        else:
+            # Map allowed names to IDs
+            mapped_ids = []
+            for name in allowed_names:
+                skill_id = skills.get(name.lower())
+                if skill_id:
+                    mapped_ids.append(skill_id)
+            mapping[cls.name] = mapped_ids
+    return mapping
 @app.route('/get-all-equipment')
 def get_all_equipment():
     equipment = Equipment.query.all()
