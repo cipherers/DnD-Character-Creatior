@@ -5,12 +5,17 @@ db = SQLAlchemy()
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# User model for authentication
+# --- Lead Developer Note on Authentication ---
+# We use werkzeug.security here because it handles hashing and salting behind the scenes.
+# Never store raw passwords. Even in a simple tool, security is a habit we build from day one.
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
+    
+    # Lazy loading (lazy=True) is efficient here because we usually only need a user's characters 
+    # when we are explicitly on their dashboard.
     characters = db.relationship('Character', backref='user', lazy=True)
 
     def set_password(self, password):
@@ -19,28 +24,28 @@ class User(db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-# Linking table for Character <-> Skill (Proficiencies)
+# --- Lead Developer Note on Many-to-Many Relationships ---
+# D&D characters have complex relationships. A character can have many items, 
+# and an item type can belong to many characters. 
+# Using association tables (db.Table) is the standard SQL way to manage this connectivity cleanly.
 character_proficiencies = db.Table(
     'character_proficiencies',
     db.Column('character_id', db.Integer, db.ForeignKey('characters.id'), primary_key=True),
     db.Column('skill_id', db.Integer, db.ForeignKey('skills.id'), primary_key=True)
 )
 
-# Linking table for Character <-> Equipment (Inventory)
 character_equipment = db.Table(
     'character_equipment',
     db.Column('character_id', db.Integer, db.ForeignKey('characters.id'), primary_key=True),
     db.Column('equipment_id', db.Integer, db.ForeignKey('equipment.id'), primary_key=True)
 )
 
-# Linking table for Character <-> Spell
 character_spells = db.Table(
     'character_spells',
     db.Column('character_id', db.Integer, db.ForeignKey('characters.id'), primary_key=True),
     db.Column('spell_id', db.Integer, db.ForeignKey('spells.id'), primary_key=True)
 )
 
-# Linking table for Character <-> Feat
 character_feats = db.Table(
     'character_feats',
     db.Column('character_id', db.Integer, db.ForeignKey('characters.id'), primary_key=True),
@@ -55,6 +60,8 @@ class Character(db.Model):
     level = db.Column(db.Integer, default=1, nullable=False)
     alignment = db.Column(db.String, nullable=False)
     hp = db.Column(db.Integer, nullable=False)
+    
+    # Ability Scores: Core D&D stats
     strength = db.Column(db.Integer, nullable=False)
     dexterity = db.Column(db.Integer, nullable=False)
     constitution = db.Column(db.Integer, nullable=False)
@@ -62,39 +69,38 @@ class Character(db.Model):
     wisdom = db.Column(db.Integer, nullable=False)
     charisma = db.Column(db.Integer, nullable=False)
 
-    # Death save tracking
+    # Death save tracking - critical for gameplay logic
     death_save_successes = db.Column(db.Integer, nullable=False, default=0)
     death_save_failures = db.Column(db.Integer, nullable=False, default=0)
 
-    # Currency
+    # --- Lead Developer Note on Redundancy vs Granularity ---
+    # We could store currency as a single 'money' field, but breaking it down by 
+    # gold, silver, etc., allows us to mirror the tabletop experience exactly.
     copper_pieces = db.Column(db.Integer, nullable=False, default=0)
     silver_pieces = db.Column(db.Integer, nullable=False, default=0)
     gold_pieces = db.Column(db.Integer, nullable=False, default=0)
     electrum_pieces = db.Column(db.Integer, nullable=False, default=0)
     platinum_pieces = db.Column(db.Integer, nullable=False, default=0)
 
-    # Foreign keys for relationships
+    # Relationships
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     race_id = db.Column(db.Integer, db.ForeignKey('races.id'), nullable=False)
     character_class_id = db.Column(db.Integer, db.ForeignKey('classes.id'), nullable=False)
     background_id = db.Column(db.Integer, db.ForeignKey('backgrounds.id'), nullable=True)
 
-    # Relationships to other models
     race = db.relationship('Race', backref='characters', lazy=True)
     character_class = db.relationship('Class', backref='characters', lazy=True)
     background = db.relationship('Background', backref='characters', lazy=True)
     
-    # Many-to-many relationships
-    # Many-to-many relationships
+    # Many-to-many relationship links
     proficiencies = db.relationship('Skill', secondary=character_proficiencies, backref=db.backref('characters_with_skill'), lazy=True)
     inventory = db.relationship('Equipment', secondary=character_equipment, backref=db.backref('characters_with_equipment'), lazy=True)
     spells = db.relationship('Spell', secondary=character_spells, backref=db.backref('characters_with_spell'), lazy=True)
     feats = db.relationship('Feat', secondary=character_feats, backref=db.backref('characters_with_feat'), lazy=True)
     
-    # Image path
     image_path = db.Column(db.String, nullable=True)
 
-    # Track last updated level for ability scores
+    # Track last updated level for ability scores to manage when a player gets an ASI (Ability Score Improvement)
     last_updated_level = db.Column(db.Integer, nullable=False, default=0)
 
     def __init__(self, name, age, alignment, hp, strength, dexterity, constitution, intelligence, wisdom, charisma, race, character_class, level, background=None, user=None, copper_pieces=0, silver_pieces=0, gold_pieces=0, electrum_pieces=0, platinum_pieces=0):
@@ -109,11 +115,10 @@ class Character(db.Model):
         self.intelligence = intelligence
         self.wisdom = wisdom
         self.charisma = charisma
-        self.race = race # Assign the full Race object
-        self.character_class = character_class # Assign the full Class object
+        self.race = race 
+        self.character_class = character_class 
         self.background = background
         self.user = user
-        # Initialize currency values
         self.copper_pieces = copper_pieces
         self.silver_pieces = silver_pieces
         self.gold_pieces = gold_pieces
@@ -122,19 +127,22 @@ class Character(db.Model):
 
     def roll_ability_scores(self):
         """
-        Rolls 4d6 and drops the lowest for each ability score,
+        Rolls 4d6 and drops the lowest for each ability score (Standard D&D rules),
         then applies racial bonuses.
+        
+        Lead Dev Tip: Notice how we're using sorted() and slicing rolls[:3]. 
+        It's much more readable than writing a loop to find the minimum.
         """
         abilities = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma']
         
-        # Roll ability scores
         rolled_scores = {}
         for ability in abilities:
+            # 4d6 drop lowest
             rolls = sorted([random.randint(1, 6) for _ in range(4)], reverse=True)
             score = sum(rolls[:3])
             rolled_scores[ability] = score
 
-        # Apply racial bonuses and assign scores to the character
+        # Racial bonuses are hardcoded into the Race model, making this logic generic.
         self.strength = rolled_scores['strength'] + self.race.strength_bonus
         self.dexterity = rolled_scores['dexterity'] + self.race.dexterity_bonus
         self.constitution = rolled_scores['constitution'] + self.race.constitution_bonus
@@ -161,6 +169,8 @@ class Race(db.Model):
 class Class(db.Model):
     __tablename__ = 'classes'
     id = db.Column(db.Integer, primary_key=True)
+    # Lead Dev Note: We keep this simple now, but we'll likely need to add 
+    # 'spellcasting_ability' fields here later as we expand the magic system.
     name = db.Column(db.String, nullable=False)
     description = db.Column(db.Text, nullable=False)
     hit_die = db.Column(db.Integer, nullable=False)
@@ -195,7 +205,7 @@ class Spell(db.Model):
     level = db.Column(db.Integer, nullable=False)
     school = db.Column(db.String, nullable=False)
     casting_time = db.Column(db.String, nullable=False)
-    range_val = db.Column(db.String, nullable=False) # 'range' is a reserved keyword
+    range_val = db.Column(db.String, nullable=False) 
     components = db.Column(db.String, nullable=False)
     duration = db.Column(db.String, nullable=False)
     description = db.Column(db.Text, nullable=False)
@@ -208,11 +218,13 @@ class Feat(db.Model):
     prerequisites = db.Column(db.String, nullable=True)
 
 class Trait(db.Model):
+    # These represent racial traits e.g. "Darkvision"
     __tablename__ = 'traits'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     description = db.Column(db.Text, nullable=False)
     race_id = db.Column(db.Integer, db.ForeignKey('races.id'), nullable=False)
+
 
 def seed_database():
     # ...existing code...

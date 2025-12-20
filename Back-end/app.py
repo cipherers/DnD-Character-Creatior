@@ -15,18 +15,23 @@ from reportlab.pdfgen import canvas
 import os
 from werkzeug.utils import secure_filename
 
+# --- Lead Developer Note on Project Structure ---
+# We use os.path.join and os.path.abspath to ensure our paths are robust regardless 
+# of where the server is started from. This prevents the "missing directory" 
+# errors that plague many early-stage projects.
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../Front-end/static/uploads')
-# Ensure upload folder exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# --- Flask Application Setup ---
-# The template_folder is set to 'Front-end' to find index.html
+# --- Lead Developer Note on Flask Configuration ---
+# By default, Flask looks for 'templates' and 'static' in the same folder as the script.
+# Since we separated our Front-end and Back-end directories, we explicitly tell 
+# Flask where to find them. This keeps our project organized and modular.
 app = Flask(__name__, template_folder='../Front-end', static_folder='../Front-end/static')
-# Configure the SQLite database. This will create a file called 'site.db'
-# in the same directory as this script.
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'a_very_secret_key' # Needed for flash messages and sessions
+# In a real production app, we'd pull the SECRET_KEY from an environment variable.
+app.config['SECRET_KEY'] = 'a_very_secret_key' 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Initialize the SQLAlchemy object with the Flask app
@@ -749,14 +754,19 @@ def get_dnd_info():
 def add_dnd_info_page():
     return render_template('add_dnd_info.html')
 
-@app.route('/level-up/<int:character_id>')
+# --- Lead Developer Note on the Wizard Pattern ---
+# The 'Wizard' pattern is excellent for complex tasks like leveling up. 
+# We fetch the character, but notice we don't save anything here. 
+# This route just prepares the environment. The actual state changes 
+# happen in 'update_character'. Separation of concerns at its finest.
+@app.route('/level-up-wizard/<int:character_id>', methods=['GET'])
 def level_up_wizard(character_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    character = Character.query.get_or_404(character_id)
-    if character.user_id != session['user_id']:
-        return "Unauthorized", 403
-    return render_template('level_up_wizard.html', character=character)
+    char = Character.query.get(character_id)
+    if not char or char.user_id != session['user_id']:
+        return "Character not found or unauthorized", 404
+    return render_template('level_up_wizard.html', character=char)
 
 # --- Player Manual ---
 @app.route('/gamer_manual.html')
@@ -850,15 +860,20 @@ def download_character_json(character_id):
         mimetype='application/json'
     )
 
-@app.route('/download-character/pdf/<int:character_id>')
+# --- Lead Developer Note on PDF Generation ---
+# Using reportlab's canvas is like painting. It gives you absolute control 
+# but requires manual positioning. 
+# tip: I've broken this down into nested helper functions (draw_header, draw_attributes). 
+# This makes the coordinate math much easier to manage and debug.
+@app.route('/download-character-pdf/<int:character_id>')
 def download_character_pdf(character_id):
     if 'user_id' not in session:
         flash('You must be logged in to download characters.')
         return redirect(url_for('login'))
         
-    char = Character.query.get_or_404(character_id)
-    if char.user_id != session['user_id']:
-        return "Unauthorized", 403
+    char = Character.query.get(character_id)
+    if not char or char.user_id != session['user_id']:
+        return "Character not found or unauthorized", 404
 
     # Create a PDF in memory
     buffer = io.BytesIO()

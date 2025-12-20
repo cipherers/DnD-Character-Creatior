@@ -1,6 +1,12 @@
 /* Google Fonts Import */
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Lato:ital,wght@0,400;0,700;1,400&display=swap');
 
+/* 
+   --- Lead Developer Note on Design Systems ---
+   We start with CSS variables (:root). This is our source of truth. 
+   If the User wants to change the "accent red" later, we change it in ONE place.
+   Naming convention: use functional names like --accent-red rather than --my-color.
+*/
 :root {
     --bg-parchment: #f4e4bc;
     --text-ink: #2c1810;
@@ -11,6 +17,12 @@
     --shadow-soft: 0 4px 6px -1px rgba(44, 24, 16, 0.2), 0 2px 4px -1px rgba(44, 24, 16, 0.1);
 }
 
+/* 
+   Atmospheric Layering:
+   We use a fixed background with a linear-gradient overlay.
+   The overlay (rgba(0,0,0,0.4)) ensures that our content is the star, 
+   not the background image. Readability > Aesthetics.
+*/
 body {
     font-family: 'Lato', sans-serif;
     color: var(--text-ink);
@@ -23,6 +35,14 @@ body {
     background-repeat: no-repeat;
 }
 
+/* 
+   Thematic Typography:
+   'Cinzel' for headers gives that ancient scroll feel.
+   'Lato' for body text ensures a clean reading experience.
+   We use a 4-point text-shadow to create a "stroke" effect. 
+   Why not -webkit-text-stroke? It's often inconsistent; 
+   shadows are more reliable across browsers.
+*/
 h1,
 h2,
 h3,
@@ -60,7 +80,12 @@ nav a:hover {
     text-decoration: none !important;
 }
 
-/* Containers */
+/* 
+   Parchment Box Component:
+   This is our primary content container.
+   The combination of background-image (parchment) and inner-shadow (inset) 
+   gives it a tactile, physical depth.
+*/
 .parchment-box {
     background-color: var(--bg-paper);
     background-image: url('/static/img/parchment_bg.png');
@@ -75,7 +100,7 @@ nav a:hover {
     overflow: hidden;
 }
 
-/* Corner embellishments (pseudo-elements if needed, or simple borders) */
+/* The "inner border" common in fantasy sheets */
 .parchment-box::before {
     content: "";
     pointer-events: none;
@@ -89,7 +114,11 @@ nav a:hover {
     border-radius: 2px;
 }
 
-/* Forms */
+/* 
+   Form inputs:
+   We want them to look like ink on paper, not digital boxes.
+   Removing all borders except the bottom one achieves this "fill in the blank" look.
+*/
 label {
     font-family: 'Cinzel', serif;
     font-weight: 700;
@@ -127,7 +156,12 @@ select.form-input-dnd {
     cursor: pointer;
 }
 
-/* Buttons */
+/* 
+   Button Strategy:
+   Primary buttons should feel powerful (Red).
+   Secondary buttons should feel grounding (Brown).
+   Always include a hover state to tell the user "I am interactive".
+*/
 .btn-dnd {
     font-family: 'Cinzel', serif;
     font-weight: 700;
@@ -201,7 +235,7 @@ select.form-input-dnd {
     font-family: 'Cinzel', serif;
 }
 
-/* Red Text Stroke Utility */
+/* Red Text Stroke Utility helper */
 .text-\[\#8b0000\],
 .text-red-dnd {
     text-shadow:
