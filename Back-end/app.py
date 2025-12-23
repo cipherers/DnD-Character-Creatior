@@ -890,36 +890,57 @@ def download_character_pdf(character_id):
         canvas.rect(24, 24, width - 48, height - 48)
 
     def draw_header(canvas, y_pos):
+        # Character Portrait (if exists)
+        portrait_width = 80
+        portrait_height = 80
+        portrait_x = 50
+        
+        if char.image_path:
+            try:
+                # Use absolute path for the image
+                base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+                img_path = os.path.join(base_dir, char.image_path.replace('/', os.sep))
+                if os.path.exists(img_path):
+                    canvas.drawImage(img_path, portrait_x, y_pos - portrait_height + 10, width=portrait_width, height=portrait_height, mask='auto', preserveAspectRatio=True)
+                    # Frame for portrait
+                    canvas.setStrokeColorRGB(0.83, 0.69, 0.22) # Gold
+                    canvas.setLineWidth(2)
+                    canvas.rect(portrait_x, y_pos - portrait_height + 10, portrait_width, portrait_height)
+                else:
+                    print(f"DEBUG: Portrait file not found at {img_path}")
+            except Exception as e:
+                print(f"DEBUG: Error drawing portrait: {e}")
+        
         canvas.setFont("Times-Bold", 28)
         canvas.setFillColorRGB(0.55, 0, 0) # Dark Red
-        canvas.drawCentredString(width / 2, y_pos, "CHARACTER SHEET")
+        canvas.drawCentredString(width / 2 + 30, y_pos, "CHARACTER SHEET")
         
-        y_pos -= 30
+        y_pos -= 35
         canvas.setFont("Times-Roman", 12)
         canvas.setFillColorRGB(0, 0, 0)
         
-        # Info Grid
-        start_x = 50
-        col_width = 170
+        # Info Grid - Shifted slightly right to make room for portrait
+        start_x = 150 
+        col_width = 140
         
         # Row 1
         canvas.drawString(start_x, y_pos, f"Name: {char.name}")
         canvas.drawString(start_x + col_width, y_pos, f"Class: {char.character_class.name} ({char.level})")
-        canvas.drawString(start_x + 2 * col_width, y_pos, f"Background: {char.background.name if char.background else '-'}")
+        canvas.drawString(start_x + 2 * col_width + 20, y_pos, f"Background: {char.background.name if char.background else '-'}")
         
         y_pos -= 20
         # Row 2
         canvas.drawString(start_x, y_pos, f"Race: {char.race.name}")
         canvas.drawString(start_x + col_width, y_pos, f"Alignment: {char.alignment}")
-        canvas.drawString(start_x + 2 * col_width, y_pos, f"Player: {char.user.username}")
+        canvas.drawString(start_x + 2 * col_width + 20, y_pos, f"Player: {char.user.username}")
         
-        return y_pos - 30
+        return y_pos - 45
 
     def draw_attributes(canvas, y_pos):
         canvas.setFont("Times-Bold", 16)
         canvas.setFillColorRGB(0.36, 0.25, 0.20)
-        canvas.drawString(50, y_pos, "ABILITY SCORES")
-        y_pos -= 10
+        canvas.drawCentredString(width/2, y_pos, "ABILITY SCORES")
+        y_pos -= 20
         
         # Draw boxes for attributes
         stats = [
@@ -927,68 +948,80 @@ def download_character_pdf(character_id):
             ("INT", char.intelligence), ("WIS", char.wisdom), ("CHA", char.charisma)
         ]
         
-        box_width = 50
-        box_height = 60
-        gap = 40
-        start_x = 55
+        box_width = 60 # Slightly wider
+        box_height = 70 # Slightly taller
+        gap = 25 # Smaller gap to center better
+        start_x = (width - (6 * box_width + 5 * gap)) / 2 # Dynamic centering
         
         for i, (label, value) in enumerate(stats):
             x = start_x + i * (box_width + gap)
             # Box
             canvas.setStrokeColorRGB(0.36, 0.25, 0.20)
-            canvas.rect(x, y_pos - box_height, box_width, box_height)
+            canvas.setLineWidth(1.5)
+            canvas.rect(x, y_pos - box_height, box_width, box_height, stroke=1, fill=0)
+            
+            # Label Background
+            canvas.setFillColorRGB(0.9, 0.85, 0.8)
+            canvas.rect(x + 2, y_pos - 15, box_width - 4, 13, stroke=0, fill=1)
             
             # Label
+            canvas.setFillColorRGB(0.36, 0.25, 0.20)
             canvas.setFont("Times-Bold", 10)
             canvas.drawCentredString(x + box_width/2, y_pos - 12, label)
             
             # Value
-            canvas.setFont("Times-Bold", 18)
-            canvas.drawCentredString(x + box_width/2, y_pos - 34, str(value))
+            canvas.setFont("Times-Bold", 22)
+            canvas.drawCentredString(x + box_width/2, y_pos - 40, str(value))
             
-            # Modifier
+            # Modifier Circle
             mod = (value - 10) // 2
             mod_str = f"+{mod}" if mod >= 0 else str(mod)
-            canvas.setFont("Times-Roman", 10)
-            canvas.drawCentredString(x + box_width/2, y_pos - 52, mod_str)
+            canvas.setLineWidth(1)
+            canvas.circle(x + box_width/2, y_pos - 58, 10, stroke=1, fill=0)
+            canvas.setFont("Times-Bold", 10)
+            canvas.drawCentredString(x + box_width/2, y_pos - 61, mod_str)
             
-        return y_pos - box_height - 30
+        return y_pos - box_height - 35
 
     def draw_vitals(canvas, y_pos):
         # AC, HP, Speed, etc.
         canvas.setFont("Times-Bold", 16)
         canvas.setFillColorRGB(0.36, 0.25, 0.20)
-        canvas.drawString(50, y_pos, "VITALS")
-        y_pos -= 10
+        canvas.drawCentredString(width/2, y_pos, "VITALS")
+        y_pos -= 20
         
-        # Simple boxes
+        v_box_w = 90
+        v_box_h = 60
+        v_gap = 30
+        v_start_x = (width - (3 * v_box_w + 2 * v_gap)) / 2
+        
         # AC
-        canvas.rect(50, y_pos - 50, 60, 50)
+        x = v_start_x
+        canvas.setStrokeColorRGB(0.36, 0.25, 0.20)
+        canvas.rect(x, y_pos - v_box_h, v_box_w, v_box_h, stroke=1, fill=0)
         canvas.setFont("Times-Bold", 10)
-        canvas.drawCentredString(80, y_pos - 12, "ARMOR")
-        canvas.drawCentredString(80, y_pos - 22, "CLASS")
-        canvas.setFont("Times-Bold", 20)
-        # Calculate AC (Base 10 + Dex + Armor? Just simplified 10 + Dex for now or assume logic elsewhere)
-        # We don't have equipped logic fully calculated in backend model property, so let's just do 10 + Dex Mod 
+        canvas.drawCentredString(x + v_box_w/2, y_pos - 12, "ARMOR CLASS")
+        canvas.setFont("Times-Bold", 24)
         ac = 10 + ((char.dexterity - 10) // 2) 
-        # Scan inventory for armor? (Optional enhancement later)
-        canvas.drawCentredString(80, y_pos - 42, str(ac))
+        canvas.drawCentredString(x + v_box_w/2, y_pos - v_box_h/2 - 10, str(ac))
         
         # HP
-        canvas.rect(130, y_pos - 50, 80, 50)
+        x += v_box_w + v_gap
+        canvas.rect(x, y_pos - v_box_h, v_box_w, v_box_h, stroke=1, fill=0)
         canvas.setFont("Times-Bold", 10)
-        canvas.drawCentredString(170, y_pos - 12, "HIT POINTS")
-        canvas.setFont("Times-Bold", 20)
-        canvas.drawCentredString(170, y_pos - 40, f"{char.hp} / {char.hp}")
+        canvas.drawCentredString(x + v_box_w/2, y_pos - 12, "HIT POINTS")
+        canvas.setFont("Times-Bold", 24)
+        canvas.drawCentredString(x + v_box_w/2, y_pos - v_box_h/2 - 10, f"{char.hp}")
         
-        # Speed (Generic 30 for now)
-        canvas.rect(230, y_pos - 50, 60, 50)
+        # Speed
+        x += v_box_w + v_gap
+        canvas.rect(x, y_pos - v_box_h, v_box_w, v_box_h, stroke=1, fill=0)
         canvas.setFont("Times-Bold", 10)
-        canvas.drawCentredString(260, y_pos - 12, "SPEED")
-        canvas.setFont("Times-Bold", 20)
-        canvas.drawCentredString(260, y_pos - 40, "30ft")
+        canvas.drawCentredString(x + v_box_w/2, y_pos - 12, "SPEED")
+        canvas.setFont("Times-Bold", 24)
+        canvas.drawCentredString(x + v_box_w/2, y_pos - v_box_h/2 - 10, "30ft")
 
-        return y_pos - 70
+        return y_pos - v_box_h - 40
 
     def draw_columns(canvas, y_pos):
         # We will split remaining space into two columns: Skills/Profs vs Inventory/Spells

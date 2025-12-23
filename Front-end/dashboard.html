@@ -265,41 +265,25 @@
             <form id="edit-character-form" class="space-y-4">
                 <input type="hidden" id="edit-character-id" name="character_id">
 
-                <div>
-                    <label class="block font-bold mb-1">Level</label>
-                    <input type="number" id="edit-character-level" name="level" class="form-input-dnd w-full" required>
-                </div>
+                <input type="hidden" id="edit-character-level" name="level">
 
                 <div class="h-max-40 overflow-auto border border-[#5c4033] p-2 bg-white bg-opacity-50">
                     <label class="block font-bold mb-2">Skills</label>
                     <div id="edit-character-skills" class="space-y-2"></div>
                 </div>
 
-                <div>
-                    <label class="block font-bold mb-1">Ability Score Improvement</label>
-                    <select id="edit-ability-modification" name="ability_modification" class="form-input-dnd w-full">
-                        <option value="">-- No Change --</option>
-                        <option value="all_plus_one">+1 to All Stats</option>
-                        <option value="single_plus_two">+2 to One Stat</option>
-                    </select>
-                </div>
-
-                <div id="edit-single-ability" class="hidden">
-                    <select id="edit-selected-ability" name="selected_ability" class="form-input-dnd w-full">
-                        <option value="strength">Strength</option>
-                        <option value="dexterity">Dexterity</option>
-                        <option value="constitution">Constitution</option>
-                        <option value="intelligence">Intelligence</option>
-                        <option value="wisdom">Wisdom</option>
-                        <option value="charisma">Charisma</option>
-                    </select>
-                </div>
 
                 <div class="border-t border-[#5c4033] pt-4 mt-4">
                     <label class="block font-bold mb-2 text-[#8b0000]">Update Portrait</label>
-                    <div class="flex items-center gap-2 bg-[#eaddcf] p-2 rounded border border-[#c2b280]">
+                    <div class="flex items-center gap-4 bg-[#eaddcf] p-2 rounded border border-[#c2b280]">
+                        <div class="w-12 h-12 rounded border border-[#5c4033] overflow-hidden bg-white flex-shrink-0">
+                            <img id="edit-portrait-preview" src="" alt="" class="w-full h-full object-cover hidden">
+                            <div id="edit-portrait-placeholder"
+                                class="w-full h-full flex items-center justify-center text-[10px] text-gray-400">No
+                                Image</div>
+                        </div>
                         <input type="file" id="portrait-upload" accept="image/*"
-                            class="text-xs flex-1 text-[#5c4033 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#8b0000] file:text-[#d4af37] hover:file:bg-[#600000]">
+                            class="text-xs flex-1 text-[#5c4033] file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#8b0000] file:text-[#d4af37] hover:file:bg-[#600000]">
                         <button type="button" id="upload-btn"
                             class="btn-dnd btn-primary-dnd text-xs py-1 px-3 shadow-sm hover:shadow-md transition-shadow">Upload</button>
                     </div>
@@ -421,8 +405,6 @@
             const modalId = 'edit-character-modal';
             const form = document.getElementById('edit-character-form');
             const closeModal = document.getElementById('close-edit-modal');
-            const abilityModSelect = document.getElementById('edit-ability-modification');
-            const singleAbilityDiv = document.getElementById('edit-single-ability');
 
             document.querySelectorAll('.edit-character-btn').forEach(button => {
                 button.addEventListener('click', async () => {
@@ -431,22 +413,27 @@
                     if (!response.ok) return;
                     const character = await response.json();
 
-                    // Level check logic from original
-                    // if (character.level < 4 ... ) -> Keeping user logic allows override or not? 
-                    // Original code had an alert if level < 4 for Ability Score Improvement but allowed editing skills?
-                    // Let's keep the logic: 
-                    // "if (character.level < 4 || character.level % 4 !== 0) { alert(...) return; }" was in original logic for EDIT BUTTON?
-                    // No, that seems strict for just *editing* a character.
-                    // Checking original file... YES, line 470 of original dashboard.html had that check.
-                    // I will preserve it, though it seems restrictive (you might want to edit bio/skills otherwise).
-                    // But for now, faithfully reproducing logic.
+                    /* 
                     if (character.level < 4 || character.level % 4 !== 0) {
                         alert("Character must be at an Ability Score Improvement level (4, 8, 12...) to use this specific Edit wizard. Use Level Up instead for general progression.");
                         return;
-                    }
+                    } 
+                    */
 
                     document.getElementById('edit-character-id').value = character.id;
                     document.getElementById('edit-character-level').value = character.level;
+
+
+                    const preview = document.getElementById('edit-portrait-preview');
+                    const placeholder = document.getElementById('edit-portrait-placeholder');
+                    if (character.image_path) {
+                        preview.src = '/' + character.image_path;
+                        preview.classList.remove('hidden');
+                        placeholder.classList.add('hidden');
+                    } else {
+                        preview.classList.add('hidden');
+                        placeholder.classList.remove('hidden');
+                    }
 
                     const skillsContainer = document.getElementById('edit-character-skills');
                     skillsContainer.innerHTML = '';
@@ -471,16 +458,10 @@
 
             closeModal.addEventListener('click', () => toggleModal(modalId, false));
 
-            abilityModSelect.addEventListener('change', () => {
-                singleAbilityDiv.classList.toggle('hidden', abilityModSelect.value !== 'single_plus_two');
-            });
 
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const formData = new FormData(form);
-                if (abilityModSelect.value === 'single_plus_two') {
-                    formData.append('selected_ability', document.getElementById('edit-selected-ability').value);
-                }
                 try {
                     const res = await fetch('/update-character', { method: 'POST', body: formData });
                     if (res.ok) location.reload();
