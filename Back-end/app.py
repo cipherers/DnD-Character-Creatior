@@ -23,8 +23,13 @@ import requests
 # We use os.path.join and os.path.abspath to ensure our paths are robust regardless 
 # of where the server is started from. This prevents the "missing directory" 
 # errors that plague many early-stage projects.
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../Front-end/static/uploads')
+UPLOAD_FOLDER = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    '../Front-end/static/uploads'
+)
+UPLOAD_FOLDER = os.path.abspath(UPLOAD_FOLDER)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # --- Lead Developer Note on Flask Configuration ---
 # By default, Flask looks for 'templates' and 'static' in the same folder as the script.
