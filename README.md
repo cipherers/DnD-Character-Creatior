@@ -117,8 +117,17 @@ Response: { "message": "DND information added successfully" }
 - Attempt invalid bonus (e.g. 5) → should coerce or reject (add validation).
 - Add equipment and ensure no race logic breaks.
 
-## 14. Security Notes (basic)
-- SECRET_KEY should be env-based in production.
+## 14. Deployment (Render)
+When deploying to Render, ensure the following environment variables are set in the Dashboard:
+- `SECRET_KEY`: A long, random string (e.g., generated via `openssl rand -hex 32`).
+- `FLASK_ENV`: set to `production`.
+- `TURNSTILE_SITE_KEY`: (Optional) Your Cloudflare Turnstile site key.
+- `TURNSTILE_SECRET_KEY`: (Optional) Your Cloudflare Turnstile secret key.
+
+## 15. Security Notes (basic)
+- `SECRET_KEY` MUST be set in the environment in production.
+- `SESSION_COOKIE_SECURE=True` is enabled, requiring HTTPS.
+- Rate limiting is active on sensitive endpoints.
 - No CSRF protection yet (add Flask-WTF or custom token if needed).
 - No password rules enforced (improve).
 

@@ -29,7 +29,6 @@ UPLOAD_FOLDER = os.path.join(
 )
 UPLOAD_FOLDER = os.path.abspath(UPLOAD_FOLDER)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # --- Lead Developer Note on Flask Configuration ---
 # By default, Flask looks for 'templates' and 'static' in the same folder as the script.
@@ -40,6 +39,12 @@ app = Flask(__name__, template_folder='../Front-end', static_folder='../Front-en
 # --- Security: Proxy Support ---
 # Tell Flask it's behind a proxy (like Cloudflare/Gunicorn) to correctly handle HTTPS and IP addresses.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+@app.before_request
+def enforce_https():
+    if not app.debug and request.headers.get('X-Forwarded-Proto', 'http') == 'http':
+        url = request.url.replace('http://', 'https://', 1)
+        return redirect(url, code=301)
 
 # --- Security: Rate Limiting ---
 limiter = Limiter(
@@ -394,6 +399,12 @@ def create_character():
         return render_template('index.html', races=races, classes=classes, backgrounds=backgrounds, skills=skills, class_skill_map=class_skill_map)
 
     # POST handling
+    # Turnstile verification
+    turnstile_token = request.form.get('cf-turnstile-response')
+    if os.environ.get("TURNSTILE_SECRET_KEY") and not verify_turnstile(turnstile_token):
+        flash('Security check failed. Please try again.')
+        return redirect(url_for('create_character'))
+
     user = User.query.get(session['user_id'])
     character_name = request.form.get('name')
     character_age = request.form.get('age')
@@ -710,6 +721,11 @@ def get_feats():
 @limiter.limit("10 per minute")
 def add_dnd_info():
     """Endpoint to dynamically add new DND information based on type."""
+    # Turnstile verification
+    turnstile_token = request.form.get('cf-turnstile-response')
+    if os.environ.get("TURNSTILE_SECRET_KEY") and not verify_turnstile(turnstile_token):
+        return jsonify({'error': 'Security check failed. Please try again.'}), 400
+
     data = request.form
     info_type = data.get('type')
     name = data.get('name')

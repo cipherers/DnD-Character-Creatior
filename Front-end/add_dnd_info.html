@@ -7,6 +7,7 @@
     <title>Add DND Info</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dnd-theme.css') }}">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 
 <body class="flex items-center justify-center min-h-screen p-4 pt-24">
@@ -54,6 +55,13 @@
             <div id="dynamic-fields-container" class="space-y-6 pt-4 border-t border-[#5c4033] border-opacity-30">
                 <!-- Dynamic fields will be rendered here -->
             </div>
+
+            <!-- Turnstile widget -->
+            {% if config['TURNSTILE_SITE_KEY'] %}
+            <div class="flex justify-center mt-6">
+                <div class="cf-turnstile" data-sitekey="{{ config['TURNSTILE_SITE_KEY'] }}"></div>
+            </div>
+            {% endif %}
 
             <div class="mt-8 pt-4 flex gap-4">
                 <button type="submit" class="btn-dnd btn-primary-dnd w-full shadow-lg">Inscribe into Tome</button>
