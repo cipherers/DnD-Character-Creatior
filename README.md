@@ -25,6 +25,7 @@ Small Flask + SQLite app to:
 | Equipment | Weapons / armor basics |
 | Skill / Ability | Placeholder for expandable features |
 | Character | Rolled stats + applied race bonuses |
+| CharacterPortrait uploads| Uploads may reset periodically on free hosting |
 
 ## 4. Ability Score Flow
 1. Race is created via Add DND Info (type=race) with six numeric bonuses (0–2).
