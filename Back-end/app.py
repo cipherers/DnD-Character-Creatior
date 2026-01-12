@@ -642,35 +642,45 @@ def update_character():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/upload-portrait', methods=['POST'])
-@limiter.limit("10 per hour") # Prevent spamming uploads
+@limiter.limit("10 per hour")
 def upload_portrait():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
+
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
-    file = request.files['file']
-    character_id = request.form.get('character_id')
 
+    file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
-    
-    if file:
-        if not allowed_file(file.filename):
-            return jsonify({"error": "Invalid file type"}), 400
 
-    # safer: don’t keep original filename
+    character_id = request.form.get('character_id', type=int)
+    if not character_id:
+        return jsonify({'error': 'Missing character_id'}), 400
+
+    # Check ownership BEFORE saving anything
+    char = Character.query.filter_by(id=character_id, user_id=session['user_id']).first()
+    if not char:
+        return jsonify({'error': 'Character not found or unauthorized'}), 404
+
+    if not allowed_file(file.filename):
+        return jsonify({"error": "Invalid file type"}), 400
+
+    if not file.mimetype or not file.mimetype.startswith("image/"):
+        return jsonify({"error": "Invalid file"}), 400
+
+    # Safer filename
     ext = file.filename.rsplit(".", 1)[1].lower()
     filename = secure_filename(f"char_{character_id}_{session['user_id']}.{ext}")
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    
-    char = Character.query.get(character_id)
-    if char and char.user_id == session['user_id']:
+
+    try:
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         char.image_path = f"static/uploads/{filename}"
         db.session.commit()
         return jsonify({'message': 'Image uploaded', 'image_path': char.image_path})
-    return jsonify({'error': 'Character not found or unauthorized'}), 404
-    return jsonify({'error': 'Upload failed'}), 500
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': 'Upload failed'}), 500
 
 @app.route('/get-spells')
 def get_spells():
