@@ -14,6 +14,10 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import os
 from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import requests
 
 # --- Lead Developer Note on Project Structure ---
 # We use os.path.join and os.path.abspath to ensure our paths are robust regardless 
@@ -28,11 +32,44 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Flask where to find them. This keeps our project organized and modular.
 app = Flask(__name__, template_folder='../Front-end', static_folder='../Front-end/static')
 
+# --- Security: Proxy Support ---
+# Tell Flask it's behind a proxy (like Cloudflare/Gunicorn) to correctly handle HTTPS and IP addresses.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+# --- Security: Rate Limiting ---
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",
+)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# In a real production app, we'd pull the SECRET_KEY from an environment variable.
-app.config['SECRET_KEY'] = 'a_very_secret_key' 
+
+# --- Security: Secret Key ---
+# In production, this MUST be set in the environment.
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    if app.debug or os.environ.get("FLASK_ENV") == "development":
+        SECRET_KEY = "dev_only_change_me_unsecure"
+        print("WARNING: Using default SECRET_KEY in development mode.")
+    else:
+        raise RuntimeError("SECRET_KEY environment variable is not set in production!")
+
+app.config['SECRET_KEY'] = SECRET_KEY
+app.config.update(
+    SESSION_COOKIE_SECURE=True,   # only over HTTPS
+    SESSION_COOKIE_HTTPONLY=True, # not readable by JS
+    SESSION_COOKIE_SAMESITE="Lax",
+)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# --- Security: Upload Limits ---
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # Reduced to 2 MB for portraits
+
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+def allowed_file(filename: str) -> bool:
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Initialize the SQLAlchemy object with the Flask app
 db.init_app(app)
@@ -81,6 +118,7 @@ def get_all_equipment():
     return jsonify([{'id': e.id, 'name': e.name, 'item_type': e.item_type, 'description': e.description} for e in equipment])
 
 @app.route('/add-inventory-item', methods=['POST'])
+@limiter.limit("20 per minute")
 def add_inventory_item():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
@@ -105,6 +143,7 @@ def add_inventory_item():
     return jsonify({'message': 'Item added successfully'})
 
 @app.route('/remove-inventory-item', methods=['POST'])
+@limiter.limit("20 per minute")
 def remove_inventory_item():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
@@ -258,16 +297,39 @@ def seed_database():
             db.session.add(trait_darkvision)
             db.session.commit()
             print("Seeded basic traits.")
-        # Example debug: update later
+# Example debug: update later
         pass
+
+def verify_turnstile(token):
+    secret_key = os.environ.get("TURNSTILE_SECRET_KEY")
+    if not secret_key:
+        return True # Skip if not configured
+    
+    response = requests.post(
+        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+        data={
+            "secret": secret_key,
+            "response": token,
+            "remoteip": request.remote_addr,
+        },
+    )
+    result = response.json()
+    return result.get("success", False)
 
 
 
 
 # --- Authentication ---
 @app.route('/', methods=['GET', 'POST'])
+@limiter.limit("5 per minute") # Prevent brute force
 def login():
     if request.method == 'POST':
+        # Turnstile verification
+        turnstile_token = request.form.get('cf-turnstile-response')
+        if os.environ.get("TURNSTILE_SECRET_KEY") and not verify_turnstile(turnstile_token):
+            flash('Security check failed. Please try again.')
+            return render_template('login.html')
+
         username = request.form.get('username')
         password = request.form.get('password')
         user = User.query.filter_by(username=username).first()
@@ -313,6 +375,7 @@ def dashboard():
     return render_template('dashboard.html', characters=characters, total=total, per_page=per_page)
 
 @app.route('/create-character', methods=['GET', 'POST'])
+@limiter.limit("10 per hour", methods=["POST"])
 def create_character():
     if 'user_id' not in session:
         return redirect(url_for('login'))
@@ -422,6 +485,7 @@ def create_character():
     return redirect(url_for('dashboard'))
 
 @app.route('/delete-character/<int:char_id>', methods=['POST'])
+@limiter.limit("5 per minute")
 def delete_character(char_id):
     if 'user_id' not in session:
         flash('You must be logged in to delete characters.')
@@ -578,6 +642,7 @@ def update_character():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/upload-portrait', methods=['POST'])
+@limiter.limit("10 per hour") # Prevent spamming uploads
 def upload_portrait():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
@@ -591,15 +656,20 @@ def upload_portrait():
         return jsonify({'error': 'No selected file'}), 400
     
     if file:
-        filename = secure_filename(f"char_{character_id}_{file.filename}")
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        
-        char = Character.query.get(character_id)
-        if char and char.user_id == session['user_id']:
-            char.image_path = f"static/uploads/{filename}"
-            db.session.commit()
-            return jsonify({'message': 'Image uploaded', 'image_path': char.image_path})
-        return jsonify({'error': 'Character not found or unauthorized'}), 404
+        if not allowed_file(file.filename):
+            return jsonify({"error": "Invalid file type"}), 400
+
+    # safer: don’t keep original filename
+    ext = file.filename.rsplit(".", 1)[1].lower()
+    filename = secure_filename(f"char_{character_id}_{session['user_id']}.{ext}")
+    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    
+    char = Character.query.get(character_id)
+    if char and char.user_id == session['user_id']:
+        char.image_path = f"static/uploads/{filename}"
+        db.session.commit()
+        return jsonify({'message': 'Image uploaded', 'image_path': char.image_path})
+    return jsonify({'error': 'Character not found or unauthorized'}), 404
     return jsonify({'error': 'Upload failed'}), 500
 
 @app.route('/get-spells')
@@ -622,6 +692,7 @@ def get_feats():
     return jsonify([{'id': f.id, 'name': f.name, 'description': f.description} for f in feats])
 
 @app.route('/add-dnd-info', methods=['POST'])
+@limiter.limit("10 per minute")
 def add_dnd_info():
     """Endpoint to dynamically add new DND information based on type."""
     data = request.form

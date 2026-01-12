@@ -7,6 +7,7 @@
     <title>Login / Register</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dnd-theme.css') }}">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 
 <body class="flex items-center justify-center min-h-screen p-4">
@@ -38,6 +39,11 @@
                 <input type="password" id="password" name="password" class="w-full form-input-dnd"
                     placeholder="Secret Rune" required>
             </div>
+            <!-- Turnstile widget -->
+            {% if config['TURNSTILE_SITE_KEY'] %}
+            <div class="cf-turnstile" data-sitekey="{{ config['TURNSTILE_SITE_KEY'] }}"></div>
+            {% endif %}
+
             <button type="submit" class="btn-dnd btn-primary-dnd w-full shadow-lg">Enter Realm</button>
         </form>
 
