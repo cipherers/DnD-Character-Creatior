@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 from sqlalchemy import text
 import random
 from flask import session
@@ -35,6 +36,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Since we separated our Front-end and Back-end directories, we explicitly tell 
 # Flask where to find them. This keeps our project organized and modular.
 app = Flask(__name__, template_folder='../Front-end', static_folder='../Front-end/static')
+CORS(app, supports_credentials=True)
 
 # --- Security: Proxy Support ---
 # Tell Flask it's behind a proxy (like Cloudflare/Gunicorn) to correctly handle HTTPS and IP addresses.
@@ -71,7 +73,7 @@ app.config['SECRET_KEY'] = SECRET_KEY
 app.config.update(
     SESSION_COOKIE_SECURE=True,   # only over HTTPS
     SESSION_COOKIE_HTTPONLY=True, # not readable by JS
-    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SAMESITE="None", # Required for cross-site cookies in some decoupled setups
 )
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # --- Security: Upload Limits ---
@@ -329,81 +331,88 @@ def verify_turnstile(token):
 
 
 
-# --- Authentication ---
-@app.route('/', methods=['GET', 'POST'])
-@limiter.limit("5 per minute") # Prevent brute force
-def login():
-    if request.method == 'POST':
-        # Turnstile verification
-        turnstile_token = request.form.get('cf-turnstile-response')
-        if os.environ.get("TURNSTILE_SECRET_KEY") and not verify_turnstile(turnstile_token):
-            flash('Security check failed. Please try again.')
-            return render_template('login.html')
+@app.route('/api/check-auth')
+def check_auth():
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+        return jsonify({'logged_in': True, 'username': user.username})
+    return jsonify({'logged_in': False})
 
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
-        if user and user.check_password(password):
-            session['user_id'] = user.id
-            return redirect(url_for('dashboard'))
-        elif not user:
-            # Register new user
-            if not username or not password:
-                flash('Username and password required.')
-                return render_template('login.html')
-            new_user = User(username=username)
-            new_user.set_password(password)
-            db.session.add(new_user)
-            db.session.commit()
-            session['user_id'] = new_user.id
-            flash('Account created and logged in!')
-            return redirect(url_for('dashboard'))
-        else:
-            flash('Invalid credentials.')
-    return render_template('login.html')
+# --- Authentication ---
+@app.route('/login', methods=['POST'])
+@limiter.limit("5 per minute")
+def login():
+    # Turnstile verification
+    turnstile_token = request.form.get('cf-turnstile-response')
+    if os.environ.get("TURNSTILE_SECRET_KEY") and not verify_turnstile(turnstile_token):
+        return jsonify({'error': 'Security check failed. Please try again.'}), 400
+
+    username = request.form.get('username')
+    password = request.form.get('password')
+
+    if not username or not password:
+        return jsonify({'error': 'Username and password required.'}), 400
+
+    user = User.query.filter_by(username=username).first()
+    if user and user.check_password(password):
+        session['user_id'] = user.id
+        return jsonify({'message': 'Logged in successfully', 'redirect': '/dashboard.html'})
+    elif not user:
+        # Register new user
+        new_user = User(username=username)
+        new_user.set_password(password)
+        db.session.add(new_user)
+        db.session.commit()
+        session['user_id'] = new_user.id
+        return jsonify({'message': 'Account created and logged in!', 'redirect': '/dashboard.html'})
+    else:
+        return jsonify({'error': 'Invalid credentials.'}), 401
 
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)
-    flash('Logged out.')
-    return redirect(url_for('login'))
+    return jsonify({'message': 'Logged out.'})
 
 # --- Flask Routes ---
 
 # --- Dashboard ---
-@app.route('/dashboard')
-def dashboard():
+@app.route('/api/dashboard')
+def dashboard_api():
     if 'user_id' not in session:
-        flash('Please log in to access the dashboard.')
-        return redirect(url_for('login'))
+        return jsonify({'error': 'Unauthorized'}), 401
 
     user = User.query.get(session['user_id'])
     characters = Character.query.filter_by(user_id=user.id).all()
-    total = len(characters)  # Calculate the total number of characters
-    per_page = 10  # Define the number of characters per page
+    
+    char_list = []
+    for char in characters:
+        char_list.append({
+            'id': char.id,
+            'name': char.name,
+            'race': char.race.name if char.race else 'Unknown',
+            'class': char.character_class.name if char.character_class else 'Unknown',
+            'level': char.level,
+            'hp': char.hp,
+            'image_path': char.image_path
+        })
 
-    return render_template('dashboard.html', characters=characters, total=total, per_page=per_page)
+    return jsonify({
+        'username': user.username,
+        'characters': char_list,
+        'total': len(char_list),
+        'per_page': 10
+    })
 
-@app.route('/create-character', methods=['GET', 'POST'])
-@limiter.limit("10 per hour", methods=["POST"])
+@app.route('/create-character', methods=['POST'])
+@limiter.limit("10 per hour")
 def create_character():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return jsonify({'error': 'Unauthorized'}), 401
 
-    if request.method == 'GET':
-        races = Race.query.all()
-        classes = Class.query.all()
-        backgrounds = Background.query.all()
-        skills = Skill.query.all()
-        class_skill_map = get_class_skill_map()
-        return render_template('index.html', races=races, classes=classes, backgrounds=backgrounds, skills=skills, class_skill_map=class_skill_map)
-
-    # POST handling
     # Turnstile verification
     turnstile_token = request.form.get('cf-turnstile-response')
     if os.environ.get("TURNSTILE_SECRET_KEY") and not verify_turnstile(turnstile_token):
-        flash('Security check failed. Please try again.')
-        return redirect(url_for('create_character'))
+        return jsonify({'error': 'Security check failed. Please try again.'}), 400
 
     user = User.query.get(session['user_id'])
     character_name = request.form.get('name')
@@ -427,15 +436,13 @@ def create_character():
     selected_background = Background.query.get(background_id)
 
     if not selected_race or not selected_class:
-        flash('Race and Class are required.')
-        return redirect(url_for('create_character'))
+        return jsonify({'error': 'Race and Class are required.'}), 400
 
     try:
         lvl = int(character_level)
         age_val = int(character_age) if character_age else 1
     except ValueError:
-        flash('Invalid level or age.')
-        return redirect(url_for('create_character'))
+        return jsonify({'error': 'Invalid level or age.'}), 400
 
     try:
         copper = int(copper_pieces)
@@ -444,8 +451,7 @@ def create_character():
         electrum = int(electrum_pieces)
         platinum = int(platinum_pieces)
     except ValueError:
-        flash('Invalid currency values.')
-        return redirect(url_for('create_character'))
+        return jsonify({'error': 'Invalid currency values.'}), 400
 
     new_character = Character(
         name=character_name,
@@ -481,13 +487,15 @@ def create_character():
             new_character.wisdom = int(request.form.get('wisdom', 0))
             new_character.charisma = int(request.form.get('charisma', 0))
         except ValueError:
-            flash('Invalid ability scores.')
-            return redirect(url_for('create_character'))
+            return jsonify({'error': 'Invalid ability scores.'}), 400
 
     selected_skill_ids = request.form.getlist('skills')
     selected_skills = Skill.query.filter(Skill.id.in_(selected_skill_ids)).all()
+    # Check if we should restrict skills here based on class
+    class_skill_map = get_class_skill_map()
+    allowed_skill_ids = class_skill_map.get(selected_class.name, [])
     for skill in selected_skills:
-        if skill.id in get_class_skill_map().get(selected_class.id, []):
+        if not allowed_skill_ids or skill.id in allowed_skill_ids:
             new_character.proficiencies.append(skill)
 
     selected_equipment_ids = request.form.getlist('equipment')
@@ -497,8 +505,7 @@ def create_character():
     db.session.add(new_character)
     db.session.commit()
 
-    flash(f"Character '{new_character.name}' created successfully!")
-    return redirect(url_for('dashboard'))
+    return jsonify({'message': f"Character '{new_character.name}' created successfully!", 'redirect': '/dashboard.html'})
 
 @app.route('/delete-character/<int:char_id>', methods=['POST'])
 @limiter.limit("5 per minute")
@@ -567,16 +574,38 @@ def get_class_skill_map_route():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/get-character/<int:character_id>', methods=['GET'])
+@app.route('/api/get-character/<int:character_id>', methods=['GET'])
 def get_character(character_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
     character = Character.query.get_or_404(character_id)
+    if character.user_id != session['user_id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
     available_skills = Skill.query.all()
     return jsonify({
         'id': character.id,
+        'name': character.name,
         'level': character.level,
+        'age': character.age,
+        'alignment': character.alignment,
+        'race': character.race.name if character.race else None,
+        'class': character.character_class.name if character.character_class else None,
+        'background': character.background.name if character.background else None,
+        'strength': character.strength,
+        'dexterity': character.dexterity,
+        'constitution': character.constitution,
+        'intelligence': character.intelligence,
+        'wisdom': character.wisdom,
+        'charisma': character.charisma,
+        'hp': character.hp,
+        'gold_pieces': character.gold_pieces,
+        'silver_pieces': character.silver_pieces,
+        'copper_pieces': character.copper_pieces,
         'skills': [skill.id for skill in character.proficiencies],
-        'spells': [spell.id for spell in character.spells],
-        'feats': [feat.id for feat in character.feats],
+        'spells': [{'id': s.id, 'name': s.name, 'level': s.level} for s in character.spells],
+        'feats': [{'id': f.id, 'name': f.name} for f in character.feats],
+        'inventory': [{'id': i.id, 'name': i.name} for i in character.inventory],
         'image_path': character.image_path,
         'available_skills': [{'id': skill.id, 'name': skill.name} for skill in available_skills]
     })
@@ -721,6 +750,7 @@ def get_feats():
 @limiter.limit("10 per minute")
 def add_dnd_info():
     """Endpoint to dynamically add new DND information based on type."""
+    # ... (Keep logic same)
     # Turnstile verification
     turnstile_token = request.form.get('cf-turnstile-response')
     if os.environ.get("TURNSTILE_SECRET_KEY") and not verify_turnstile(turnstile_token):
@@ -852,28 +882,10 @@ def get_dnd_info():
 
     return jsonify(data), 200
 
-@app.route('/add-dnd-info')
-def add_dnd_info_page():
-    return render_template('add_dnd_info.html')
-
-# --- Lead Developer Note on the Wizard Pattern ---
-# The 'Wizard' pattern is excellent for complex tasks like leveling up. 
-# We fetch the character, but notice we don't save anything here. 
-# This route just prepares the environment. The actual state changes 
-# happen in 'update_character'. Separation of concerns at its finest.
-@app.route('/level-up-wizard/<int:character_id>', methods=['GET'])
-def level_up_wizard(character_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    char = Character.query.get(character_id)
-    if not char or char.user_id != session['user_id']:
-        return "Character not found or unauthorized", 404
-    return render_template('level_up_wizard.html', character=char)
-
-# --- Player Manual ---
-@app.route('/gamer_manual.html')
-def gamer_manual():
-    return render_template('gamer_manual.html')
+# Removed legacy HTML routes: /dashboard, /add-dnd-info (GET), /gamer_manual.html
+@app.route('/')
+def home():
+    return jsonify({'api_status': 'online', 'message': 'Welcome to the DnD Character Creator API'})
 
 @app.route('/update-character-currency', methods=['POST'])
 def update_character_currency():

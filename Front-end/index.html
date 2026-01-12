@@ -5,10 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D&D Character Creator</title>
-    <!-- Tailwind CSS (Utility) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Custom D&D Theme -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dnd-theme.css') }}">
+    <link rel="stylesheet" href="static/css/dnd-theme.css">
+    <script src="static/js/config.js"></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 
@@ -17,10 +16,10 @@
         <nav class="max-w-5xl mx-auto flex justify-between items-center">
             <h1 class="text-2xl font-bold" style="color: var(--accent-gold);">DnD Character Creator</h1>
             <ul class="flex gap-6">
-                <li><a href="/login">Login</a></li>
-                <li><a href="/dashboard">Dashboard</a></li>
-                <li><a href="/add-dnd-info">Add Info</a></li>
-                <li><a href="/gamer_manual.html">Manual</a></li>
+                <li><a href="login.html">Login</a></li>
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="add_dnd_info.html">Add Info</a></li>
+                <li><a href="gamer_manual.html">Manual</a></li>
             </ul>
         </nav>
     </header>
@@ -32,17 +31,9 @@
             <div class="hr-dnd w-1/2 mx-auto"></div>
         </div>
 
-        {% with messages = get_flashed_messages() %}
-        {% if messages %}
-        <ul class="mb-6">
-            {% for message in messages %}
-            <li class="alert-dnd px-4 py-3 rounded relative mb-2 text-center shadow-md">{{ message }}</li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-        {% endwith %}
+        <div id="message-container"></div>
 
-        <form action="{{ url_for('create_character') }}" method="post" class="space-y-8">
+        <form id="character-form" class="space-y-8">
             <!-- Basic Character Information -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
@@ -63,28 +54,19 @@
                 <div>
                     <label for="race" class="block mb-1">Race</label>
                     <select id="race" name="race" class="w-full form-input-dnd" required>
-                        <option value="">-- Choose Race --</option>
-                        {% for race in races %}
-                        <option value="{{ race.id }}">{{ race.name }}</option>
-                        {% endfor %}
+                        <option value="">-- Loading Races... --</option>
                     </select>
                 </div>
                 <div>
                     <label for="class" class="block mb-1">Class</label>
                     <select id="class" name="class" class="w-full form-input-dnd" required>
-                        <option value="">-- Choose Class --</option>
-                        {% for class in classes %}
-                        <option value="{{ class.id }}">{{ class.name }}</option>
-                        {% endfor %}
+                        <option value="">-- Loading Classes... --</option>
                     </select>
                 </div>
                 <div>
                     <label for="background" class="block mb-1">Background</label>
                     <select id="background" name="background" class="w-full form-input-dnd" required>
-                        <option value="" disabled selected>-- Choose Background --</option>
-                        {% for background in backgrounds %}
-                        <option value="{{ background.id }}">{{ background.name }}</option>
-                        {% endfor %}
+                        <option value="">-- Loading Backgrounds... --</option>
                     </select>
                 </div>
                 <div class="md:col-span-2">
@@ -109,16 +91,25 @@
             <div>
                 <h2 class="text-2xl font-bold mb-4 text-center">Ability Scores</h2>
                 <p class="text-center text-sm mb-6 opacity-75">Enter scores manually or let the dice decide.</p>
-
                 <div class="grid grid-cols-3 md:grid-cols-6 gap-4 text-center">
-                    {% for stat in ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'] %}
-                    <div class="flex flex-col items-center">
-                        <label for="{{ stat|lower }}" class="text-xs mb-2 uppercase">{{ stat[:3] }}</label>
-                        <input type="number" id="{{ stat|lower }}" name="{{ stat|lower }}"
-                            class="form-input-dnd text-center w-full font-bold text-lg" min="3" max="20" required
-                            value="10">
-                    </div>
-                    {% endfor %}
+                    <div><label for="strength" class="text-xs mb-2 uppercase">STR</label><input type="number"
+                            id="strength" name="strength" class="form-input-dnd text-center w-full font-bold" min="3"
+                            max="20" required value="10"></div>
+                    <div><label for="dexterity" class="text-xs mb-2 uppercase">DEX</label><input type="number"
+                            id="dexterity" name="dexterity" class="form-input-dnd text-center w-full font-bold" min="3"
+                            max="20" required value="10"></div>
+                    <div><label for="constitution" class="text-xs mb-2 uppercase">CON</label><input type="number"
+                            id="constitution" name="constitution" class="form-input-dnd text-center w-full font-bold"
+                            min="3" max="20" required value="10"></div>
+                    <div><label for="intelligence" class="text-xs mb-2 uppercase">INT</label><input type="number"
+                            id="intelligence" name="intelligence" class="form-input-dnd text-center w-full font-bold"
+                            min="3" max="20" required value="10"></div>
+                    <div><label for="wisdom" class="text-xs mb-2 uppercase">WIS</label><input type="number" id="wisdom"
+                            name="wisdom" class="form-input-dnd text-center w-full font-bold" min="3" max="20" required
+                            value="10"></div>
+                    <div><label for="charisma" class="text-xs mb-2 uppercase">CHA</label><input type="number"
+                            id="charisma" name="charisma" class="form-input-dnd text-center w-full font-bold" min="3"
+                            max="20" required value="10"></div>
                 </div>
             </div>
 
@@ -128,183 +119,131 @@
                 <div>
                     <h2 class="text-xl font-bold mb-4 border-b border-[#5c4033] pb-1">Skills</h2>
                     <div id="skills-container" class="space-y-2 h-40 overflow-y-auto pr-2 custom-scrollbar">
-                        <!-- Skills populated dynamically -->
                         <p class="text-sm italic opacity-50">Select a class to see available skills.</p>
                     </div>
                 </div>
                 <div>
                     <h2 class="text-xl font-bold mb-4 border-b border-[#5c4033] pb-1">Starting Equipment</h2>
                     <div id="equipment-container" class="space-y-2 h-40 overflow-y-auto pr-2 custom-scrollbar">
-                        <!-- Equipment populated dynamically -->
                         <p class="text-sm italic opacity-50">Select a class to see equipment.</p>
                     </div>
                 </div>
             </div>
 
             <!-- Turnstile widget -->
-            {% if config['TURNSTILE_SITE_KEY'] %}
-            <div class="flex justify-center mb-4">
-                <div class="cf-turnstile" data-sitekey="{{ config['TURNSTILE_SITE_KEY'] }}"></div>
-            </div>
-            {% endif %}
+            <div id="turnstile-container" class="flex justify-center mb-4"></div>
 
             <!-- Action Buttons -->
             <div class="flex flex-col md:flex-row gap-4 mt-8 pt-4 border-t border-[#5c4033] border-opacity-25">
-                <button type="submit" name="submit_manual" class="btn-dnd btn-primary-dnd flex-1 text-center shadow-lg">
-                    Save Manual Scores
-                </button>
+                <button type="button" id="btn-manual" class="btn-dnd btn-primary-dnd flex-1 text-center shadow-lg">Save
+                    Manual Scores</button>
                 <div class="flex items-center justify-center text-sm font-bold opacity-50 px-2">- OR -</div>
-                <button type="submit" name="roll_scores" class="btn-dnd btn-secondary-dnd flex-1 text-center shadow-lg"
-                    formnovalidate>
-                    Roll 4d6 (Auto-Save)
-                </button>
+                <button type="button" id="btn-roll" class="btn-dnd btn-secondary-dnd flex-1 text-center shadow-lg">Roll
+                    4d6 (Auto-Save)</button>
             </div>
-            <p class="text-center text-xs mt-2 opacity-60">
-                Rolling will overwrite any entered scores.
-            </p>
         </form>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const classSelect = document.getElementById('class');
-            const skillsContainer = document.getElementById('skills-container');
-            const equipmentContainer = document.getElementById('equipment-container');
+        async function apiFetch(endpoint, options = {}) {
+            options.credentials = 'include';
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+            return response;
+        }
 
-            // Fetch skills and equipment for the selected class
-            classSelect.addEventListener('change', async function () {
-                const classId = this.value;
-                if (!classId) {
-                    skillsContainer.innerHTML = '<p class="text-gray-500">No skills available.</p>';
-                    equipmentContainer.innerHTML = '<p class="text-gray-500">No equipment available.</p>';
-                    return;
-                }
+        document.addEventListener('DOMContentLoaded', async function () {
+            // Check Auth
+            const authRes = await apiFetch('/api/check-auth');
+            const authData = await authRes.json();
+            if (!authData.logged_in) {
+                window.location.href = 'login.html';
+                return;
+            }
 
-                try {
-                    // Fetch skills and equipment from the server
-                    const response = await fetch(`/get-class-details/${classId}`);
-                    const data = await response.json();
+            // Populate Turnstile
+            if (typeof TURNSTILE_SITE_KEY !== 'undefined' && TURNSTILE_SITE_KEY !== 'YOUR_TURNSTILE_SITE_KEY') {
+                const container = document.getElementById('turnstile-container');
+                const widget = document.createElement('div');
+                widget.className = 'cf-turnstile';
+                widget.setAttribute('data-sitekey', TURNSTILE_SITE_KEY);
+                container.appendChild(widget);
+            }
 
-                    // Populate skills
-                    skillsContainer.innerHTML = '';
-                    if (data.skills.length > 0) {
-                        data.skills.forEach(skill => {
-                            const skillOption = document.createElement('div');
-                            skillOption.innerHTML = `
-                            <label class="inline-flex items-center cursor-pointer hover:opacity-80 transition-opacity">
-                                <input type="checkbox" name="skills" value="${skill.id}" class="form-checkbox bg-transparent border-[#5c4033] text-[#8b0000] focus:ring-[#d4af37]">
-                                <span class="ml-2 font-serif">${skill.name}</span>
-                            </label>
-                        `;
-                            skillsContainer.appendChild(skillOption);
-                        });
-                    } else {
-                        skillsContainer.innerHTML = '<p class="text-sm italic opacity-50">No skills available for this class.</p>';
-                    }
-
-                    // Populate equipment
-                    equipmentContainer.innerHTML = '';
-                    if (data.equipment.length > 0) {
-                        data.equipment.forEach(equip => {
-                            const equipOption = document.createElement('div');
-                            equipOption.innerHTML = `
-                            <label class="inline-flex items-center cursor-pointer hover:opacity-80 transition-opacity">
-                                <input type="checkbox" name="equipment" value="${equip.id}" class="form-checkbox bg-transparent border-[#5c4033] text-[#8b0000] focus:ring-[#d4af37]">
-                                <span class="ml-2 font-serif">${equip.name}</span>
-                            </label>
-                        `;
-                            equipmentContainer.appendChild(equipOption);
-                        });
-                    } else {
-                        equipmentContainer.innerHTML = '<p class="text-sm italic opacity-50">No equipment available for this class.</p>';
-                    }
-                } catch (error) {
-                    console.error('Error fetching class details:', error);
-                    skillsContainer.innerHTML = '<p class="text-red-800">Failed to load skills.</p>';
-                    equipmentContainer.innerHTML = '<p class="text-red-800">Failed to load equipment.</p>';
-                }
-            });
-
+            // Populate Dropdowns
             const raceSelect = document.getElementById('race');
+            const classSelect = document.getElementById('class');
             const backgroundSelect = document.getElementById('background');
 
-            async function populateDropdown(url, selectElement, placeholder) {
+            async function populate(endpoint, el, placeholder) {
+                const res = await apiFetch(endpoint);
+                const data = await res.json();
+                el.innerHTML = `<option value="">${placeholder}</option>`;
+                data.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.textContent = item.name;
+                    el.appendChild(opt);
+                });
+            }
+
+            populate('/get-races', raceSelect, '-- Choose Race --');
+            populate('/get-classes', classSelect, '-- Choose Class --');
+            populate('/get-backgrounds', backgroundSelect, '-- Choose Background --');
+
+            // Class details change
+            classSelect.addEventListener('change', async function () {
+                const id = this.value;
+                if (!id) return;
+                const res = await apiFetch(`/get-class-details/${id}`);
+                const data = await res.json();
+
+                const skillsEl = document.getElementById('skills-container');
+                skillsEl.innerHTML = data.skills.length ? '' : '<p class="text-sm italic opacity-50">No skills available.</p>';
+                data.skills.forEach(s => {
+                    const div = document.createElement('div');
+                    div.innerHTML = `<label class="inline-flex items-center cursor-pointer"><input type="checkbox" name="skills" value="${s.id}" class="form-checkbox bg-transparent border-[#5c4033] text-[#8b0000] focus:ring-[#d4af37] mr-2"><span>${s.name}</span></label>`;
+                    skillsEl.appendChild(div);
+                });
+
+                const equipEl = document.getElementById('equipment-container');
+                equipEl.innerHTML = data.equipment.length ? '' : '<p class="text-sm italic opacity-50">No equipment available.</p>';
+                data.equipment.forEach(e => {
+                    const div = document.createElement('div');
+                    div.innerHTML = `<label class="inline-flex items-center cursor-pointer"><input type="checkbox" name="equipment" value="${e.id}" class="form-checkbox bg-transparent border-[#5c4033] text-[#8b0000] focus:ring-[#d4af37] mr-2"><span>${e.name}</span></label>`;
+                    equipEl.appendChild(div);
+                });
+            });
+
+            // Form submission
+            async function submitForm(isRoll) {
+                const form = document.getElementById('character-form');
+                const formData = new FormData(form);
+                if (isRoll) formData.append('roll_scores', 'true');
+
+                const messageContainer = document.getElementById('message-container');
+                messageContainer.innerHTML = '';
+
                 try {
-                    const response = await fetch(url);
-                    const data = await response.json();
-                    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
-                    data.forEach(item => {
-                        const option = document.createElement('option');
-                        option.value = item.id;
-                        option.textContent = item.name;
-                        selectElement.appendChild(option);
-                    });
-                } catch (error) {
-                    console.error(`Error fetching data for ${placeholder}:`, error);
+                    const res = await apiFetch('/create-character', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    if (res.ok) {
+                        window.location.href = data.redirect || 'dashboard.html';
+                    } else {
+                        const alert = document.createElement('div');
+                        alert.className = 'alert-dnd px-4 py-3 rounded relative mb-2 text-center shadow-md';
+                        alert.textContent = data.error || 'Creation failed';
+                        messageContainer.appendChild(alert);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Network error');
                 }
             }
 
-            populateDropdown('/get-races', raceSelect, '-- Choose Race --');
-            populateDropdown('/get-classes', classSelect, '-- Choose Class --');
-            populateDropdown('/get-backgrounds', backgroundSelect, '-- Choose Background --');
+            document.getElementById('btn-manual').addEventListener('click', () => submitForm(false));
+            document.getElementById('btn-roll').addEventListener('click', () => submitForm(true));
         });
     </script>
 </body>
-<!-- class_skill_map JSON kept in a non-JS script tag -->
-<script type="application/json"
-    id="class-skill-map-data">{{ (class_skill_map if class_skill_map is defined else {}) | tojson | safe }}</script>
-<script type="application/javascript">
-    // Existing Logic for Skill Map (unchanged logic, just ensuring it runs)
-    let CLASS_SKILL_MAP = {};
-    try {
-        const dataEl = document.getElementById('class-skill-map-data');
-        if (dataEl && dataEl.textContent) {
-            CLASS_SKILL_MAP = JSON.parse(dataEl.textContent);
-        }
-    } catch (e) {
-        CLASS_SKILL_MAP = {};
-    }
-
-    // Ensure keys are strings to match select.value
-    const CLASS_SKILL_MAP_STR = {};
-    Object.keys(CLASS_SKILL_MAP || {}).forEach(function (k) {
-        CLASS_SKILL_MAP_STR[String(k)] = CLASS_SKILL_MAP[k];
-    });
-
-    document.addEventListener('DOMContentLoaded', async function () {
-        const classSelect = document.getElementById('class');
-        const skillsContainer = document.getElementById('skills-container');
-        let classSkillMap = {};
-
-        try {
-            const response = await fetch('/get-class-skill-map');
-            if (response.ok) {
-                classSkillMap = await response.json();
-            }
-        } catch (error) {
-            console.error('Error fetching class-skill map:', error);
-        }
-
-        function updateSkillCheckboxes() {
-            const selectedClass = classSelect.value.toLowerCase();
-            // Fallback logic for client-side map if needed, but server fetch is primary
-            const allowedSkills = classSkillMap[selectedClass] || [];
-
-            document.querySelectorAll('#skills-container input[type="checkbox"]').forEach(cb => {
-                const skillName = cb.nextElementSibling.textContent.trim();
-                // Logic: if Class has restricted skills, disable others. 
-                // If API returns specific restricted list, we use it. 
-                // NOTE: The previous logic relied on pre-rendered checkboxes which we are now dynamically creating.
-                // Since we are dynamically creating checkboxes based on /get-class-details, 
-                // we might NOT need to disable/enable them here because the server only sends allowed ones?
-                // Checking app.py: get_class_details sends specific skills. 
-                // So we don't need to filter them client-side anymore! 
-                // We can just trust the server response in the change event listener above.
-            });
-        }
-
-        // We can probably simplify this part since the 'change' listener above repopulates the list entirely.
-    });
-</script>
 
 </html>
