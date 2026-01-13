@@ -36,13 +36,14 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Since we separated our Front-end and Back-end directories, we explicitly tell 
 # Flask where to find them. This keeps our project organized and modular.
 # --- Security: CORS and Origins ---
+IS_DEV = app.debug or os.environ.get("ENV") == "dev" or os.environ.get("FLASK_ENV") == "development"
+
 FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN")
 if not FRONTEND_ORIGIN:
-    if app.debug or os.environ.get("FLASK_ENV") == "development":
+    if IS_DEV:
         FRONTEND_ORIGIN = "*" # Allow all in development
     else:
-        # In production, default to a safe value or raise error if preferred
-        FRONTEND_ORIGIN = "https://www.yourdomain.com" 
+        FRONTEND_ORIGIN = "https://www.yourdomain.com"
 
 app = Flask(__name__, template_folder='../Front-end', static_folder='../Front-end/static')
 CORS(app, supports_credentials=True, origins=[FRONTEND_ORIGIN])
@@ -76,7 +77,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # In production, this MUST be set in the environment.
 SECRET_KEY = os.environ.get("SECRET_KEY")
 if not SECRET_KEY:
-    if app.debug or os.environ.get("FLASK_ENV") == "development":
+    if IS_DEV:
         SECRET_KEY = "dev_only_change_me_unsecure"
         print("WARNING: Using default SECRET_KEY in development mode.")
     else:
