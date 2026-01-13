@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="static/css/dnd-theme.css">
+    <script src="static/js/config.js"></script>
+</head>
+
+<body class="flex items-center justify-center min-h-screen p-4 pt-24">
+    <header class="absolute top-0 left-0 w-full p-4 z-50">
+        <nav class="max-w-5xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold" style="color: var(--accent-gold);">DnD Character Creator</h1>
+            <ul class="flex gap-6">
+                <li><a href="index.html">Create</a></li>
+                <li><a href="add_dnd_info.html">Add Info</a></li>
+                <li><a href="gamer_manual.html">Manual</a></li>
+                <li><a href="#" id="logout-link" class="text-red-400 hover:text-red-300">Logout</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="parchment-box p-6 md:p-10 w-full max-w-6xl mt-8 min-h-[80vh] flex flex-col">
+        <div class="flex justify-between items-center mb-8 border-b border-[#5c4033] pb-4">
+            <h1 class="text-4xl font-bold">Adventurer's Journal</h1>
+            <a href="index.html" class="btn-dnd btn-secondary-dnd text-sm">Create New</a>
+        </div>
+
+        <div id="loading-state" class="text-center py-20">
+            <p class="italic opacity-60">Consulting the archives...</p>
+        </div>
+
+        <div id="dashboard-content" class="md:flex md:space-x-8 flex-1 hidden">
+            <!-- Left: character list -->
+            <div class="md:w-1/2 flex flex-col">
+                <h2 class="text-xl font-bold mb-4">Roster</h2>
+                <div class="overflow-y-auto max-h-[600px] pr-2 custom-scrollbar flex-1">
+                    <ul id="roster-list" class="space-y-4"></ul>
+                </div>
+            </div>
+
+            <!-- Right: persistent details panel -->
+            <aside id="char-details-panel" class="md:w-1/2 parchment-box p-6 mt-6 md:mt-0 relative min-h-[400px]">
+                <div class="absolute top-0 right-0 p-2 opacity-20 pointer-events-none text-4xl">🐉</div>
+                <div id="char-details-empty" class="text-center text-[#5c4033] opacity-60 mt-20 italic">
+                    Select a character to view their parchment.
+                </div>
+                <div id="char-details-content" class="hidden h-full flex flex-col">
+                    <div class="flex items-center mb-6 border-b border-[#5c4033] pb-4">
+                        <div class="character-thumb-dnd w-24 h-24 mr-6 rounded overflow-hidden">
+                            <img id="detail-thumb" src="" alt="" class="w-full h-full object-cover">
+                        </div>
+                        <div>
+                            <div id="detail-name" class="font-bold text-3xl text-[#8b0000] font-serif"></div>
+                            <div id="detail-sub" class="text-lg font-serif italic text-[#5c4033]"></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <div class="text-xs uppercase tracking-widest text-[#5c4033] mb-1">Class</div>
+                            <div id="detail-class" class="font-bold text-lg">-</div>
+                        </div>
+                        <div>
+                            <div class="text-xs uppercase tracking-widest text-[#5c4033] mb-1">Race</div>
+                            <div id="detail-race" class="font-bold text-lg">-</div>
+                        </div>
+                        <div>
+                            <div class="text-xs uppercase tracking-widest text-[#5c4033] mb-1">Background</div>
+                            <div id="detail-background" class="font-bold text-lg">-</div>
+                        </div>
+                    </div>
+                    <div class="bg-[#eaddcf] p-4 rounded border border-[#c2b280] mb-4">
+                        <div class="font-bold text-[#8b0000] mb-2 font-serif text-center">Ability Scores</div>
+                        <div class="grid grid-cols-3 gap-y-4 gap-x-2 text-center">
+                            <div>
+                                <div class="text-xs">STR</div>
+                                <div id="detail-str" class="text-xl font-bold"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs">DEX</div>
+                                <div id="detail-dex" class="text-xl font-bold"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs">CON</div>
+                                <div id="detail-con" class="text-xl font-bold"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs">INT</div>
+                                <div id="detail-int" class="text-xl font-bold"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs">WIS</div>
+                                <div id="detail-wis" class="text-xl font-bold"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs">CHA</div>
+                                <div id="detail-cha" class="text-xl font-bold"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <div id="empty-state" class="text-center py-20 hidden">
+            <h2 class="text-2xl font-bold mb-4">Your journey begins here...</h2>
+            <a href="index.html" class="btn-dnd btn-primary-dnd text-lg">Create First Character</a>
+        </div>
+
+        <div id="ledgers-container" class="mt-12 hidden">
+            <h2 class="text-2xl font-bold mb-4 border-b border-[#5c4033] pb-2">Full Ledgers (Inventory & Currency)</h2>
+            <div id="ledgers-list" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="edit-character-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black bg-opacity-70 transition-opacity"></div>
+        <div
+            class="parchment-box p-8 w-full max-w-lg relative z-10 transform scale-95 transition-all duration-300 bg-[#f4e4bc]">
+            <h2 class="text-2xl font-bold mb-6 text-center border-b-2 border-[#8b0000] pb-2">Modify Attributes</h2>
+            <form id="edit-character-form" class="space-y-4">
+                <input type="hidden" id="edit-character-id" name="character_id">
+                <input type="hidden" id="edit-character-level" name="level">
+                <div class="h-max-40 overflow-auto border border-[#5c4033] p-2 bg-white bg-opacity-50">
+                    <label class="block font-bold mb-2">Skills</label>
+                    <div id="edit-character-skills" class="space-y-2"></div>
+                </div>
+                <div class="border-t border-[#5c4033] pt-4 mt-4">
+                    <label class="block font-bold mb-2 text-[#8b0000]">Update Portrait</label>
+                    <div class="flex items-center gap-4 bg-[#eaddcf] p-2 rounded border border-[#c2b280]">
+                        <div class="w-12 h-12 rounded border border-[#5c4033] overflow-hidden bg-white flex-shrink-0">
+                            <img id="edit-portrait-preview" src="" alt="" class="w-full h-full object-cover hidden">
+                            <div id="edit-portrait-placeholder"
+                                class="w-full h-full flex items-center justify-center text-[10px] text-gray-400">No
+                                Image</div>
+                        </div>
+                        <input type="file" id="portrait-upload" accept="image/*" class="text-xs flex-1">
+                        <button type="button" id="upload-btn"
+                            class="btn-dnd btn-primary-dnd text-xs py-1 px-3">Upload</button>
+                    </div>
+                    <p id="upload-status" class="text-xs mt-1 text-center italic text-[#5c4033]"></p>
+                </div>
+                <div class="flex gap-4 mt-6">
+                    <button type="submit" class="btn-dnd btn-primary-dnd flex-1">Save</button>
+                    <button type="button" onclick="toggleModal('edit-character-modal', false)"
+                        class="btn-dnd btn-secondary-dnd flex-1">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Item Modal -->
+    <div id="add-item-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black bg-opacity-70"></div>
+        <div
+            class="parchment-box p-6 w-full max-w-md relative z-10 transform scale-95 transition-all duration-300 bg-[#f4e4bc]">
+            <h2 class="text-xl font-bold mb-4">Acquire Equipment</h2>
+            <input type="hidden" id="add-item-char-id">
+            <input type="text" id="item-search" placeholder="Search the armory..." class="form-input-dnd w-full mb-4">
+            <div id="item-list-container"
+                class="h-60 overflow-y-auto border border-[#5c4033] p-2 bg-white bg-opacity-50 space-y-2"></div>
+            <div class="mt-4 text-right">
+                <button type="button" onclick="toggleModal('add-item-modal', false)"
+                    class="btn-dnd btn-secondary-dnd">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleModal(modalId, show) {
+            const modal = document.getElementById(modalId);
+            const content = modal.querySelector('div[class*="transform"]');
+            if (show) {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            } else {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                content.classList.remove('scale-100');
+                content.classList.add('scale-95');
+            }
+        }
+
+        async function apiFetch(endpoint, options = {}) {
+            options.credentials = 'include';
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+            if (response.status === 401) {
+                window.location.href = 'login.html';
+                return null;
+            }
+            return response;
+        }
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            const res = await apiFetch('/api/dashboard');
+            if (!res) return;
+            const data = await res.json();
+
+            document.getElementById('loading-state').classList.add('hidden');
+
+            if (!data.characters || data.characters.length === 0) {
+                document.getElementById('empty-state').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('dashboard-content').classList.remove('hidden');
+            document.getElementById('ledgers-container').classList.remove('hidden');
+
+            const rosterList = document.getElementById('roster-list');
+            const ledgersList = document.getElementById('ledgers-list');
+
+            const allFullChars = await Promise.all(data.characters.map(async c => {
+                const cRes = await apiFetch(`/api/get-character/${c.id}`);
+                return cRes.json();
+            }));
+
+            data.characters.forEach((char, index) => {
+                const fullChar = allFullChars[index];
+
+                // Roster Item
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="character-card stat-card-dnd p-4 flex items-center space-x-4 cursor-pointer hover:shadow-md transition-all border border-[#5c4033] bg-white relative" id="card-${char.id}">
+                        <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-[#d4af37] flex-shrink-0 bg-[#2c1810]">
+                            <img src="${char.image_path ? API_BASE_URL + '/' + char.image_path : 'https://api.dicebear.com/7.x/adventurer/svg?seed=' + char.name}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-xl text-[#8b0000] font-serif">${char.name}</div>
+                            <div class="text-sm font-serif text-[#5c4033]">${char.race} ${char.class}</div>
+                            <div class="text-xs text-gray-500 mt-1">Level ${char.level}</div>
+                        </div>
+                    </div>
+                    <div class="mt-2 flex gap-2 pl-2">
+                        <button onclick="openEditModal(${char.id})" class="btn-dnd btn-secondary-dnd text-xs py-1 px-3">Edit</button>
+                        <a href="level_up_wizard.html?id=${char.id}" class="btn-dnd btn-primary-dnd text-xs py-1 px-3">Level Up</a>
+                        <a href="${API_BASE_URL}/download-character-pdf/${char.id}" class="btn-dnd btn-secondary-dnd text-xs py-1 px-3">PDF</a>
+                        <button onclick="deleteCharacter(${char.id}, '${char.name}')" class="text-red-900 opacity-60 hover:opacity-100 text-xs px-2 py-1 ml-auto uppercase font-bold tracking-widest">Delete</button>
+                    </div>
+                `;
+                li.querySelector('.character-card').addEventListener('mouseenter', () => showDetails(fullChar));
+                rosterList.appendChild(li);
+
+                // Ledger Item
+                const ledger = document.createElement('div');
+                ledger.className = 'parchment-box p-4 bg-white relative';
+                ledger.innerHTML = `
+                    <h3 class="text-lg font-bold text-[#8b0000]">${fullChar.name}</h3>
+                    <div class="mt-4 bg-[#f9f5eb] p-2 rounded border border-[#e5e7eb]">
+                        <h4 class="text-xs font-bold uppercase mb-2 text-[#5c4033]">Coin Purse</h4>
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div class="flex flex-col"><label>GP</label><input type="number" class="currency-input form-input-dnd text-center" data-id="${fullChar.id}" data-type="gold_pieces" value="${fullChar.gold_pieces || 0}"></div>
+                            <div class="flex flex-col"><label>SP</label><input type="number" class="currency-input form-input-dnd text-center" data-id="${fullChar.id}" data-type="silver_pieces" value="${fullChar.silver_pieces || 0}"></div>
+                            <div class="flex flex-col"><label>CP</label><input type="number" class="currency-input form-input-dnd text-center" data-id="${fullChar.id}" data-type="copper_pieces" value="${fullChar.copper_pieces || 0}"></div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="text-xs font-bold uppercase text-[#5c4033]">Inventory</h4>
+                            <button onclick="openAddItemModal(${fullChar.id})" class="text-[10px] uppercase font-bold text-green-700 hover:text-green-900">+ Add</button>
+                        </div>
+                        <ul class="text-sm space-y-1" id="inv-${fullChar.id}"></ul>
+                    </div>
+                `;
+                const invList = ledger.querySelector(`#inv-${fullChar.id}`);
+                (fullChar.inventory || []).forEach(item => {
+                    const itemLi = document.createElement('li');
+                    itemLi.className = 'flex justify-between border-b border-gray-100 pb-1';
+                    itemLi.innerHTML = `<span>${item.name}</span><button onclick="removeItem(${fullChar.id}, ${item.id})" class="text-red-400 hover:text-red-600">×</button>`;
+                    invList.appendChild(itemLi);
+                });
+                ledgersList.appendChild(ledger);
+            });
+
+            // Delegate currency events
+            ledgersList.addEventListener('change', async (e) => {
+                if (e.target.classList.contains('currency-input')) {
+                    const { id, type } = e.target.dataset;
+                    await apiFetch('/update-character-currency', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ character_id: id, currency_type: type, value: parseInt(e.target.value) })
+                    });
+                }
+            });
+
+            document.getElementById('logout-link').addEventListener('click', async (e) => {
+                e.preventDefault();
+                await apiFetch('/logout');
+                window.location.href = 'login.html';
+            });
+        });
+
+        function showDetails(char) {
+            const panel = document.getElementById('char-details-content');
+            const empty = document.getElementById('char-details-empty');
+
+            document.getElementById('detail-name').textContent = char.name;
+            document.getElementById('detail-sub').textContent = `Level ${char.level} • Age ${char.age}`;
+            document.getElementById('detail-class').textContent = char.class || 'N/A';
+            document.getElementById('detail-race').textContent = char.race || 'N/A';
+            document.getElementById('detail-background').textContent = char.background || 'N/A';
+            document.getElementById('detail-str').textContent = char.strength;
+            document.getElementById('detail-dex').textContent = char.dexterity;
+            document.getElementById('detail-con').textContent = char.constitution;
+            document.getElementById('detail-int').textContent = char.intelligence;
+            document.getElementById('detail-wis').textContent = char.wisdom;
+            document.getElementById('detail-cha').textContent = char.charisma;
+
+            const thumb = document.getElementById('detail-thumb');
+            thumb.src = char.image_path ? API_BASE_URL + '/' + char.image_path : `https://api.dicebear.com/7.x/adventurer/svg?seed=${char.name}`;
+
+            empty.classList.add('hidden');
+            panel.classList.remove('hidden');
+        }
+
+        async function deleteCharacter(id, name) {
+            if (confirm(`Burn ${name}'s sheet?`)) {
+                const res = await apiFetch(`/delete-character/${id}`, { method: 'POST' });
+                if (res && res.ok) location.reload();
+            }
+        }
+
+        async function openEditModal(id) {
+            const res = await apiFetch(`/api/get-character/${id}`);
+            const char = await res.json();
+
+            document.getElementById('edit-character-id').value = char.id;
+            document.getElementById('edit-character-level').value = char.level;
+
+            const preview = document.getElementById('edit-portrait-preview');
+            const placeholder = document.getElementById('edit-portrait-placeholder');
+            if (char.image_path) {
+                preview.src = API_BASE_URL + '/' + char.image_path;
+                preview.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            } else {
+                preview.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+
+            const skillsContainer = document.getElementById('edit-character-skills');
+            skillsContainer.innerHTML = '';
+            (char.available_skills || []).forEach(skill => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center';
+                div.innerHTML = `<input type="checkbox" name="skills" value="${skill.id}" ${char.skills.includes(skill.id) ? 'checked' : ''} class="mr-2"><label>${skill.name}</label>`;
+                skillsContainer.appendChild(div);
+            });
+
+            toggleModal('edit-character-modal', true);
+        }
+
+        // ... more functions for inventory, portrait upload, etc.
+    </script>
+</body>
+
+</html>
