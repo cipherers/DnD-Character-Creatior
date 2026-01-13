@@ -301,16 +301,9 @@ def seed_database():
             db.session.commit()
             
         print("Database seeding check complete.")
-        # Check for Traits (checking if Elf has traits for simplicity)
-        elf_race = Race.query.filter_by(name='Elf').first()
-        if elf_race and not Trait.query.filter_by(race_id=elf_race.id).first():
-             # Now create and add trait using the committed race
-            trait_darkvision = Trait(name='Darkvision', description='You can see in dim light within 60 feet of you as if it were bright light.', race_id=elf_race.id)
-            db.session.add(trait_darkvision)
-            db.session.commit()
-            print("Seeded basic traits.")
-# Example debug: update later
-        pass
+# --- Run Seed in WSGI Context ---
+with app.app_context():
+    seed_database()
 
 def verify_turnstile(token):
     secret_key = os.environ.get("TURNSTILE_SECRET_KEY")
