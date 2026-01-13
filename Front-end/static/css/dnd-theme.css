@@ -28,7 +28,7 @@ body {
     color: var(--text-ink);
     background-color: #1a0f0a;
     /* Fallback for dragon scale dark */
-    background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('/static/img/dragon_bg.png');
+    background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('../img/dragon_bg.png');
     background-size: cover;
     background-attachment: fixed;
     background-position: center;
@@ -88,7 +88,7 @@ nav a:hover {
 */
 .parchment-box {
     background-color: var(--bg-paper);
-    background-image: url('/static/img/parchment_bg.png');
+    background-image: url('../img/parchment_bg.png');
     background-size: cover;
     background-repeat: no-repeat;
     border: 2px solid var(--border-brown);
