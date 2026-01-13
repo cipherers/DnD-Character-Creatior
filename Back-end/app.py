@@ -48,6 +48,10 @@ def enforce_https():
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
 
+@app.route('/health')
+def health_check():
+    return jsonify({'status': 'healthy', 'message': 'DnD Character Creator API is up and running'}), 200
+
 # --- Security: Rate Limiting ---
 limiter = Limiter(
     get_remote_address,
