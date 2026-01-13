@@ -1,4 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+import sys
+import os
+
+# Ensure the Back-end directory is in the Python path for imports
+# This is critical for Render deployments where the app might be started from the root.
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from sqlalchemy import text
@@ -14,6 +21,7 @@ from flask import send_file
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import os
+
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_limiter import Limiter
@@ -36,6 +44,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Since we separated our Front-end and Back-end directories, we explicitly tell 
 # Flask where to find them. This keeps our project organized and modular.
 # --- Security: CORS and Origins ---
+app = Flask(__name__, template_folder='../Front-end', static_folder='../Front-end/static')
 IS_DEV = app.debug or os.environ.get("ENV") == "dev" or os.environ.get("FLASK_ENV") == "development"
 
 FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN")
@@ -45,7 +54,6 @@ if not FRONTEND_ORIGIN:
     else:
         FRONTEND_ORIGIN = "https://www.yourdomain.com"
 
-app = Flask(__name__, template_folder='../Front-end', static_folder='../Front-end/static')
 CORS(app, supports_credentials=True, origins=[FRONTEND_ORIGIN])
 
 # --- Security: Proxy Support ---
