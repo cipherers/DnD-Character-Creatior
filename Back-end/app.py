@@ -45,6 +45,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Flask where to find them. This keeps our project organized and modular.
 # --- Security: CORS and Origins ---
 app = Flask(__name__, template_folder='../Front-end', static_folder='../Front-end/static')
+app.url_map.strict_slashes = False
 IS_DEV = app.debug or os.environ.get("ENV") == "dev" or os.environ.get("FLASK_ENV") == "development"
 
 FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN")
