@@ -228,7 +228,7 @@
                     const res = await apiFetch('/create-character', { method: 'POST', body: formData });
                     const data = await res.json();
                     if (res.ok) {
-                        window.location.href = data.redirect || 'dashboard.html';
+                        window.location.href = 'dashboard.html';
                     } else {
                         const alert = document.createElement('div');
                         alert.className = 'alert-dnd px-4 py-3 rounded relative mb-2 text-center shadow-md';

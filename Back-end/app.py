@@ -372,7 +372,7 @@ def login():
     user = User.query.filter_by(username=username).first()
     if user and user.check_password(password):
         session['user_id'] = user.id
-        return jsonify({'message': 'Logged in successfully', 'redirect': '/dashboard.html'})
+        return jsonify({'message': 'Logged in successfully', 'redirect': 'dashboard.html'})
     elif not user:
         # Register new user
         new_user = User(username=username)
@@ -380,7 +380,7 @@ def login():
         db.session.add(new_user)
         db.session.commit()
         session['user_id'] = new_user.id
-        return jsonify({'message': 'Account created and logged in!', 'redirect': '/dashboard.html'})
+        return jsonify({'message': 'Account created and logged in!', 'redirect': 'dashboard.html'})
     else:
         return jsonify({'error': 'Invalid credentials.'}), 401
 
@@ -521,7 +521,7 @@ def create_character():
     db.session.add(new_character)
     db.session.commit()
 
-    return jsonify({'message': f"Character '{new_character.name}' created successfully!", 'redirect': '/dashboard.html'})
+    return jsonify({'message': f"Character '{new_character.name}' created successfully!", 'redirect': 'dashboard.html'})
 
 @app.route('/delete-character/<int:char_id>', methods=['POST'])
 @limiter.limit("5 per minute")
