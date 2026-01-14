@@ -347,12 +347,19 @@ def verify_turnstile(token):
 
 
 
-@app.route('/api/check-auth')
+@app.route("/api/check-auth", methods=["GET"])
 def check_auth():
-    if 'user_id' in session:
-        user = User.query.get(session['user_id'])
-        return jsonify({'logged_in': True, 'username': user.username})
-    return jsonify({'logged_in': False})
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"logged_in": False}), 200
+
+    user = User.query.get(user_id)
+    if not user:
+        # Session points to a user that no longer exists; clean it up
+        session.pop("user_id", None)
+        return jsonify({"logged_in": False}), 200
+
+    return jsonify({"logged_in": True, "username": user.username}), 200
 
 # --- Authentication ---
 @app.route('/login', methods=['POST'])
