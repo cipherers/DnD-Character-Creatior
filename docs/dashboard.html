@@ -322,7 +322,7 @@
 
         async function deleteCharacter(id, name) {
             if (confirm(`Burn ${name}'s sheet?`)) {
-                const res = await apiFetch(`/delete-character/${id}`, { method: 'POST' });
+                const res = await apiFetch(`/api/delete-character/${id}`, { method: 'DELETE' });
                 if (res && res.ok) location.reload();
             }
         }

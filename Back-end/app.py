@@ -496,12 +496,12 @@ def create_character():
         new_character.roll_ability_scores()
     else:
         try:
-            new_character.strength = int(request.form.get('strength', 0))
-            new_character.dexterity = int(request.form.get('dexterity', 0))
-            new_character.constitution = int(request.form.get('constitution', 0))
-            new_character.intelligence = int(request.form.get('intelligence', 0))
-            new_character.wisdom = int(request.form.get('wisdom', 0))
-            new_character.charisma = int(request.form.get('charisma', 0))
+            new_character.strength = int(request.form.get('strength', 0)) + selected_race.strength_bonus
+            new_character.dexterity = int(request.form.get('dexterity', 0)) + selected_race.dexterity_bonus
+            new_character.constitution = int(request.form.get('constitution', 0)) + selected_race.constitution_bonus
+            new_character.intelligence = int(request.form.get('intelligence', 0)) + selected_race.intelligence_bonus
+            new_character.wisdom = int(request.form.get('wisdom', 0)) + selected_race.wisdom_bonus
+            new_character.charisma = int(request.form.get('charisma', 0)) + selected_race.charisma_bonus
         except ValueError:
             return jsonify({'error': 'Invalid ability scores.'}), 400
 
@@ -541,6 +541,19 @@ def delete_character(char_id):
     db.session.commit()
     flash(f"Character '{char.name}' deleted.")
     return redirect(url_for('dashboard'))
+
+@app.route("/api/delete-character/<int:char_id>", methods=["DELETE"])
+def api_delete_character(char_id):
+    if "user_id" not in session:
+        return jsonify({"error": "Not logged in"}), 401
+
+    char = Character.query.get_or_404(char_id)
+    if char.user_id != session["user_id"]:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    db.session.delete(char)
+    db.session.commit()
+    return jsonify({"ok": True, "deleted_id": char_id})
 
 @app.route('/get-class-details/<int:class_id>')
 def get_class_details(class_id):
@@ -628,9 +641,10 @@ def get_character(character_id):
 
 @app.route('/update-character', methods=['POST'])
 def update_character():
-    character_id = request.form.get('character_id')
-    level = request.form.get('level')
-    skill_ids = request.form.getlist('skills')
+    data = request.get_json(silent=True) or request.form
+    character_id = data.get('character_id')
+    level = data.get('level')
+    skill_ids = data.getlist('skills') if hasattr(data, 'getlist') else data.get('skills', [])
 
     character = Character.query.get_or_404(character_id)
     try:
@@ -642,7 +656,7 @@ def update_character():
                 # return jsonify({"error": "Ability scores have already been increased."}), 400
                 pass # Allow re-saving for now to avoid blocking
 
-            ability_modification = request.form.get('ability_modification')
+            ability_modification = data.get('ability_modification')
             if ability_modification == 'all_plus_one':
                 # Add 1 to all ability scores
                 character.strength += 1
@@ -652,13 +666,13 @@ def update_character():
                 character.wisdom += 1
                 character.charisma += 1
             elif ability_modification == 'single_plus_two':
-                selected_ability = request.form.get('selected_ability')
+                selected_ability = data.get('selected_ability')
                 if selected_ability in ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma']:
                     setattr(character, selected_ability, getattr(character, selected_ability) + 2)
             
             # Additional Feat Handling for Level Up Wizard
             if ability_modification == 'feat':
-                feat_id = request.form.get('feats') # Single feat from wizard
+                feat_id = data.get('feats') # Single feat from wizard
                 if feat_id:
                      # Append, don't replace
                     feat = Feat.query.get(feat_id)
@@ -675,7 +689,7 @@ def update_character():
             character.proficiencies = selected_skills
             
         # Update Spells
-        spell_ids = request.form.getlist('spells')
+        spell_ids = data.getlist('spells') if hasattr(data, 'getlist') else data.get('spells', [])
         if spell_ids:
             selected_spells = Spell.query.filter(Spell.id.in_(spell_ids)).all()
             # Append new spells coming from Level Up Wizard
