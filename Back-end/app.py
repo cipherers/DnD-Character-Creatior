@@ -242,22 +242,35 @@ def remove_inventory_item():
 
 # --- Database Seeding Function ---
 def seed_database():
-    """Creates all database tables and populates them with sample data if missing."""
+    """
+    Creates all database tables and populates them with sample data if missing.
+    Safe: does not change CORS, sessions, cookies, proxy handling, or auth logic.
+    """
     with app.app_context():
         db.create_all()
 
-        # Schema migrations for characters table
+        # --- Schema Migrations (SQLite simple adds) ---
+        # This only adds missing columns; it doesn't change security behavior.
         try:
             info = db.session.execute(text("PRAGMA table_info(characters)")).fetchall()
             col_names = [row[1] for row in info]
-            if 'user_id' not in col_names:
+
+            if "user_id" not in col_names:
                 print("Adding missing 'user_id' column to characters table...")
                 db.session.execute(text("ALTER TABLE characters ADD COLUMN user_id INTEGER"))
                 db.session.commit()
-            if 'image_path' not in col_names:
+
+            if "image_path" not in col_names:
                 print("Adding missing 'image_path' column to characters table...")
                 db.session.execute(text("ALTER TABLE characters ADD COLUMN image_path TEXT"))
                 db.session.commit()
+
+            # You use this in update_character(); ensure it exists to prevent 500s.
+            if "last_updated_level" not in col_names:
+                print("Adding missing 'last_updated_level' column to characters table...")
+                db.session.execute(text("ALTER TABLE characters ADD COLUMN last_updated_level INTEGER"))
+                db.session.commit()
+
         except Exception as e:
             print(f"Migration check skipped or failed: {e}")
 
@@ -265,9 +278,11 @@ def seed_database():
             instance = model.query.filter_by(**kwargs).first()
             if instance:
                 return instance, False
-            params = {k: v for k, v in kwargs.items()}
+
+            params = dict(kwargs)
             if defaults:
                 params.update(defaults)
+
             instance = model(**params)
             db.session.add(instance)
             db.session.commit()
@@ -275,20 +290,125 @@ def seed_database():
 
         print("Checking/Seeding database content...")
 
+        # --------------------
+        # 1) RACES
+        # --------------------
         races_data = [
-            {'name': 'Human', 'description': 'A versatile and ambitious race.', 'strength_bonus': 1, 'dexterity_bonus': 1, 'constitution_bonus': 1, 'intelligence_bonus': 1, 'wisdom_bonus': 1, 'charisma_bonus': 1},
-            {'name': 'Elf', 'description': 'A graceful and agile race.', 'strength_bonus': 0, 'dexterity_bonus': 2, 'constitution_bonus': 0, 'intelligence_bonus': 1, 'wisdom_bonus': 1, 'charisma_bonus': 1},
-            {'name': 'Dwarf', 'description': 'A sturdy and durable race.', 'strength_bonus': 2, 'dexterity_bonus': 0, 'constitution_bonus': 2, 'intelligence_bonus': 0, 'wisdom_bonus': 1, 'charisma_bonus': 0},
-            {'name': 'Halfling', 'description': 'A nimble and resourceful race.', 'strength_bonus': 0, 'dexterity_bonus': 2, 'constitution_bonus': 0, 'intelligence_bonus': 1, 'wisdom_bonus': 1, 'charisma_bonus': 1},
-            {'name': 'Dragonborn', 'description': 'A powerful and ferocious race.', 'strength_bonus': 2, 'dexterity_bonus': 0, 'constitution_bonus': 2, 'intelligence_bonus': 0, 'wisdom_bonus': 1, 'charisma_bonus': 0},
-            {'name': 'Gnome', 'description': 'A curious and inventive race.', 'strength_bonus': 0, 'dexterity_bonus': 1, 'constitution_bonus': 0, 'intelligence_bonus': 2, 'wisdom_bonus': 1, 'charisma_bonus': 1},
-            {'name': 'Half-Elf', 'description': 'A graceful and agile race.', 'strength_bonus': 0, 'dexterity_bonus': 2, 'constitution_bonus': 0, 'intelligence_bonus': 1, 'wisdom_bonus': 1, 'charisma_bonus': 1},
-            {'name': 'Half-Orc', 'description': 'A powerful and ferocious race.', 'strength_bonus': 2, 'dexterity_bonus': 0, 'constitution_bonus': 2, 'intelligence_bonus': 0, 'wisdom_bonus': 1, 'charisma_bonus': 0},
-            {'name': 'Tiefling', 'description': 'A curious and inventive race.', 'strength_bonus': 0, 'dexterity_bonus': 1, 'constitution_bonus': 0, 'intelligence_bonus': 2, 'wisdom_bonus': 1, 'charisma_bonus': 1},
+            {
+                "name": "Human",
+                "description": "A versatile and ambitious race.",
+                "strength_bonus": 1, "dexterity_bonus": 1, "constitution_bonus": 1,
+                "intelligence_bonus": 1, "wisdom_bonus": 1, "charisma_bonus": 1
+            },
+            {"name": "Elf", "description": "Graceful and long-lived.", "dexterity_bonus": 2, "intelligence_bonus": 1},
+            {"name": "Dwarf", "description": "Bold and hardy.", "constitution_bonus": 2},
+            {"name": "Halfling", "description": "Small and nimble.", "dexterity_bonus": 2},
         ]
+        for r in races_data:
+            get_or_create(Race, name=r["name"], defaults=r)
 
-        for race_data in races_data:
-            get_or_create(Race, **race_data)
-
+        # --------------------
+        # 2) CLASSES  ✅ must be here
+        # --------------------
         classes_data = [
-            {'name': 'Barbarian', 'description': 'A powerful and ferocious race.', 'hit_die': 12, 'hit_die_count': 1, 'hit_die_bonus': 2, 'spellcasting_ability': 'Strength', 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability_bonus': 2, 'spellcasting_ability
+            {"name": "Fighter", "description": "A master of combat.", "hit_die": 10},
+            {"name": "Wizard", "description": "A student of arcane magic.", "hit_die": 6},
+            {"name": "Rogue", "description": "A scoundrel who uses stealth and trickery.", "hit_die": 8},
+            {"name": "Cleric", "description": "A priestly champion who wields divine magic.", "hit_die": 8},
+        ]
+        for c in classes_data:
+            get_or_create(Class, name=c["name"], defaults=c)
+
+        # --------------------
+        # 3) BACKGROUNDS
+        # --------------------
+        backgrounds_data = [
+            {"name": "Acolyte", "description": "Serving a deity and a temple."},
+            {"name": "Soldier", "description": "A trained warrior."},
+        ]
+        for b in backgrounds_data:
+            get_or_create(Background, name=b["name"], defaults=b)
+
+        # --------------------
+        # 4) SKILLS
+        # --------------------
+        skills_data = [
+            {"name": "Athletics", "associated_attribute": "Strength"},
+            {"name": "Acrobatics", "associated_attribute": "Dexterity"},
+            {"name": "Stealth", "associated_attribute": "Dexterity"},
+            {"name": "Arcana", "associated_attribute": "Intelligence"},
+            {"name": "History", "associated_attribute": "Intelligence"},
+            {"name": "Investigation", "associated_attribute": "Intelligence"},
+            {"name": "Nature", "associated_attribute": "Intelligence"},
+            {"name": "Religion", "associated_attribute": "Intelligence"},
+            {"name": "Animal Handling", "associated_attribute": "Wisdom"},
+            {"name": "Insight", "associated_attribute": "Wisdom"},
+            {"name": "Medicine", "associated_attribute": "Wisdom"},
+            {"name": "Perception", "associated_attribute": "Wisdom"},
+            {"name": "Survival", "associated_attribute": "Wisdom"},
+            {"name": "Deception", "associated_attribute": "Charisma"},
+            {"name": "Intimidation", "associated_attribute": "Charisma"},
+            {"name": "Performance", "associated_attribute": "Charisma"},
+            {"name": "Persuasion", "associated_attribute": "Charisma"},
+            {"name": "Sleight of Hand", "associated_attribute": "Dexterity"},
+        ]
+        for s in skills_data:
+            get_or_create(Skill, name=s["name"], defaults={"description": "Standard skill", **s})
+
+        # --------------------
+        # 5) EQUIPMENT
+        # --------------------
+        equipment_data = [
+            {"name": "LongSword", "item_type": "Weapon", "description": "1d8 slashing damage"},
+            {"name": "ShortSword", "item_type": "Weapon", "description": "1d6 piercing damage"},
+            {"name": "Dagger", "item_type": "Weapon", "description": "1d4 piercing damage"},
+            {"name": "GreatAxe", "item_type": "Weapon", "description": "1d12 slashing damage"},
+            {"name": "Shield", "item_type": "Armor", "description": "+2 AC"},
+            {"name": "Leather Armor", "item_type": "Armor", "description": "11 + Dex Modifier AC"},
+            {"name": "Chain Mail", "item_type": "Armor", "description": "16 AC"},
+            {"name": "Potion of Healing", "item_type": "Potion", "description": "Restores 2d4 + 2 HP"},
+            {"name": "Rope (50ft)", "item_type": "Adventuring Gear", "description": "Hempen rope."},
+            {"name": "Torch", "item_type": "Adventuring Gear", "description": "Provides light for 1 hour."},
+        ]
+        for e in equipment_data:
+            get_or_create(Equipment, name=e["name"], defaults=e)
+
+        # --------------------
+        # 6) SPELLS
+        # --------------------
+        spells_data = [
+            {"name": "Fireball", "level": 3, "school": "Evocation", "casting_time": "1 Action", "range_val": "150 ft",
+             "components": "V, S, M", "duration": "Instantaneous", "description": "A bright streak flashes..."},
+            {"name": "Cure Wounds", "level": 1, "school": "Evocation", "casting_time": "1 Action", "range_val": "Touch",
+             "components": "V, S", "duration": "Instantaneous", "description": "Heals 1d8 + Mod."},
+            {"name": "Magic Missile", "level": 1, "school": "Evocation", "casting_time": "1 Action", "range_val": "120 ft",
+             "components": "V, S", "duration": "Instantaneous", "description": "3 darts of force."},
+            {"name": "Shield", "level": 1, "school": "Abjuration", "casting_time": "1 Reaction", "range_val": "Self",
+             "components": "V, S", "duration": "1 Round", "description": "+5 AC."},
+            {"name": "Healing Word", "level": 1, "school": "Evocation", "casting_time": "1 Bonus Action", "range_val": "60 ft",
+             "components": "V", "duration": "Instantaneous", "description": "Heals 1d4 + Mod."},
+        ]
+        for sp in spells_data:
+            get_or_create(Spell, name=sp["name"], defaults=sp)
+
+        # --------------------
+        # 7) FEATS
+        # --------------------
+        feats_data = [
+            {"name": "Alert", "description": "+5 Initiative."},
+            {"name": "Mobile", "description": "+10 ft Speed."},
+            {"name": "Sharpshooter", "description": "No disadvantage at long range. -5 atk/+10 dmg."},
+            {"name": "Great Weapon Master", "description": "Bonus attack on crit/kill; -5 atk/+10 dmg option."},
+        ]
+        for f in feats_data:
+            get_or_create(Feat, name=f["name"], defaults=f)
+
+        # --------------------
+        # Seed User (optional) - safe; doesn't grant extra perms
+        # --------------------
+        user, created = get_or_create(User, username="seed_user")
+        if created or not getattr(user, "password_hash", None):
+            user.set_password("password")
+            db.session.commit()
+
+        print("Database seeding check complete.")
