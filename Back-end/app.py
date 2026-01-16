@@ -438,6 +438,15 @@ def update_character():
     if 'age' in data: char.age = int(data.get('age'))
     if 'level' in data: char.level = int(data.get('level'))
     if 'alignment' in data: char.alignment = data.get('alignment')
+    if 'hp' in data: char.hp = int(data.get('hp'))
+
+    # Update Ability Scores
+    if 'strength' in data: char.strength = int(data.get('strength'))
+    if 'dexterity' in data: char.dexterity = int(data.get('dexterity'))
+    if 'constitution' in data: char.constitution = int(data.get('constitution'))
+    if 'intelligence' in data: char.intelligence = int(data.get('intelligence'))
+    if 'wisdom' in data: char.wisdom = int(data.get('wisdom'))
+    if 'charisma' in data: char.charisma = int(data.get('charisma'))
     
     # Update skills
     skill_ids = request.form.getlist('skills')

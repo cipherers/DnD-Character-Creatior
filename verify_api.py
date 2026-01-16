@@ -54,6 +54,18 @@ def test_character_ops(session):
     resp = session.post(f"{BASE_URL}/upload-portrait", data={"character_id": char_id}, files=files)
     print(f"Upload Status: {resp.status_code}, Body: {resp.json()}")
 
+    # Test Level Up (Stats & HP)
+    print(f"\nTesting Level Up Stats for ID {char_id}...")
+    levelup_data = {
+        "character_id": char_id,
+        "level": "3",
+        "hp": "25",
+        "strength": "18",
+        "dexterity": "14"
+    }
+    resp = session.post(f"{BASE_URL}/update-character", data=levelup_data)
+    print(f"Level Up Status: {resp.status_code}, Body: {resp.json()}")
+
 def test_dashboard(session):
     print("\nTesting /api/dashboard...")
     resp = session.get(f"{BASE_URL}/api/dashboard")

@@ -70,7 +70,233 @@
         </form>
     </div>
     <script>
-        // Content omitted for brevity in this call, but I will ensure full content is written.
+        let characterId = new URLSearchParams(window.location.search).get('id');
+        let currentCharacter = null;
+        let currentStep = 1;
+        const totalSteps = 2; // Vitality -> Traits (Ability Scores)
+
+        // State for upgrades
+        let newLevel = 0;
+        let hpIncrease = 0;
+        let abilityPoints = 2; // Standard ASI logic
+        let abilities = {
+            strength: 0, dexterity: 0, constitution: 0,
+            intelligence: 0, wisdom: 0, charisma: 0
+        };
+
+        /* --- Initialization --- */
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!characterId) {
+                alert('No character specified!');
+                window.location.href = 'dashboard.html';
+                return;
+            }
+            await fetchCharacterData();
+            setupEventListeners();
+        });
+
+        async function fetchCharacterData() {
+            try {
+                const data = await apiFetch(`/api/get-character/${characterId}`);
+                if (!data || data.error) throw new Error(data.error || 'Failed to load character');
+
+                currentCharacter = data;
+                newLevel = currentCharacter.level + 1;
+
+                // Initialize base stats
+                abilities.strength = currentCharacter.stats.strength;
+                abilities.dexterity = currentCharacter.stats.dexterity;
+                abilities.constitution = currentCharacter.stats.constitution;
+                abilities.intelligence = currentCharacter.stats.intelligence;
+                abilities.wisdom = currentCharacter.stats.wisdom;
+                abilities.charisma = currentCharacter.stats.charisma;
+
+                renderWizard();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('wizard-welcome').textContent = 'Error loading wizard: ' + err.message;
+            }
+        }
+
+        /* --- Rendering --- */
+        function renderWizard() {
+            document.getElementById('wizard-welcome').innerHTML = `
+                Ascending <span class="font-bold text-[#8b0000]">${currentCharacter.name}</span> 
+                to Level ${newLevel}
+            `;
+
+            updateStepIndicator();
+            renderStepContent();
+        }
+
+        function updateStepIndicator() {
+            for (let i = 1; i <= totalSteps; i++) {
+                const el = document.getElementById(`step-indicator-${i}`);
+                if (i === currentStep) {
+                    el.className = 'step-active flex flex-col items-center group cursor-pointer';
+                    el.querySelector('div').className = 'step-circle shadow-lg';
+                } else {
+                    el.className = 'step-inactive flex flex-col items-center group cursor-pointer';
+                    el.querySelector('div').className = 'step-circle';
+                }
+            }
+        }
+
+        function renderStepContent() {
+            const form = document.getElementById('level-up-form');
+            form.innerHTML = ''; // Clear previous
+
+            if (currentStep === 1) {
+                // Step 1: Vitality (HP)
+                form.innerHTML = `
+                    <div class="text-center space-y-6">
+                        <h2 class="text-2xl font-serif font-bold text-[#8b0000]">Increase Vitality</h2>
+                        <p>Your journey has toughened you. Roll your hit die or take the average.</p>
+                        
+                        <div class="flex justify-center items-center gap-4 py-8">
+                            <div class="text-4xl font-bold font-serif text-[#5c4033] w-24 text-center">
+                                ${currentCharacter.hp}
+                            </div>
+                            <div class="text-2xl text-[#8b0000]">+</div>
+                            <input type="number" id="hp-input" value="0" min="1" 
+                                class="w-24 text-center text-3xl font-bold bg-transparent border-b-2 border-[#8b0000] focus:outline-none"
+                                onchange="hpIncrease = parseInt(this.value) || 0; updateTotalHpDisplay()">
+                            <div class="text-2xl text-[#8b0000]">=</div>
+                            <div id="total-hp-display" class="text-4xl font-bold font-serif text-[#8b0000] w-24 text-center">
+                                ${currentCharacter.hp}
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4 justify-center">
+                            <button type="button" onclick="rollHp()" class="btn-dnd btn-secondary-dnd">Roll Hit Die</button>
+                            <button type="button" onclick="takeAverageHp()" class="btn-dnd btn-secondary-dnd">Take Average</button>
+                        </div>
+                    </div>
+                    <div class="mt-auto pt-8 flex justify-end">
+                        <button type="button" onclick="nextStep()" class="btn-dnd btn-primary-dnd">Next: Attributes</button>
+                    </div>
+                `;
+            } else if (currentStep === 2) {
+                // Step 2: Ability Scores
+                form.innerHTML = `
+                    <div class="space-y-4">
+                        <h2 class="text-2xl font-serif font-bold text-center text-[#8b0000]">Refine Attributes</h2>
+                        <p class="text-center text-sm">You have <span id="points-remaining" class="font-bold text-xl text-[#8b0000]">${abilityPoints}</span> points to distribute.</p>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+                            ${Object.keys(abilities).map(key => `
+                                <div class="flex justify-between items-center bg-[rgba(92,64,51,0.05)] p-3 rounded border border-[#5c4033]/20">
+                                    <span class="capitalize font-bold w-24">${key}</span>
+                                    <div class="flex items-center gap-3">
+                                        <button type="button" onclick="adjustAbility('${key}', -1)" class="w-8 h-8 rounded-full bg-[#5c4033] text-[#f4e4bc] font-bold hover:bg-[#8b0000]">-</button>
+                                        <span id="val-${key}" class="w-8 text-center font-bold text-lg">${abilities[key]}</span>
+                                        <button type="button" onclick="adjustAbility('${key}', 1)" class="w-8 h-8 rounded-full bg-[#5c4033] text-[#f4e4bc] font-bold hover:bg-[#8b0000]">+</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="mt-auto pt-8 flex justify-between">
+                        <button type="button" onclick="prevStep()" class="btn-dnd btn-secondary-dnd">Back</button>
+                        <button type="button" onclick="submitLevelUp()" class="btn-dnd btn-primary-dnd">Confirm Level Up</button>
+                    </div>
+                `;
+            }
+        }
+
+        /* --- Actions --- */
+        function updateTotalHpDisplay() {
+            const el = document.getElementById('total-hp-display');
+            if (el) el.textContent = currentCharacter.hp + hpIncrease;
+        }
+
+        function rollHp() {
+            // Simple d8/d6/d10 simulation based on class would be better, but assuming d8 for generic fallback
+            // Ideally we'd look up class hit_die from the API or character data object if available
+            // currentCharacter object structure: { id, name, race, class, level, stats... }
+            // Since we don't have hit_die in the character object directly (it's normalized), we'll do 1d8 + 1 (con bonus approx) for fun
+            const roll = Math.floor(Math.random() * 8) + 1;
+            const input = document.getElementById('hp-input');
+            input.value = roll;
+            input.onchange();
+        }
+
+        function takeAverageHp() {
+            const avg = 5; // Average for d8
+            const input = document.getElementById('hp-input');
+            input.value = avg;
+            input.onchange();
+        }
+
+        function adjustAbility(stat, delta) {
+            // Simple validation: can't go below original, max 20, points limited
+            const currentVal = abilities[stat];
+            const originalVal = currentCharacter.stats[stat];
+
+            if (delta > 0) {
+                if (abilityPoints > 0 && currentVal < 20) {
+                    abilities[stat]++;
+                    abilityPoints--;
+                }
+            } else {
+                if (currentVal > originalVal) {
+                    abilities[stat]--;
+                    abilityPoints++;
+                }
+            }
+            renderStepContent(); // Re-render to update counts
+        }
+
+        function nextStep() {
+            if (currentStep < totalSteps) {
+                currentStep++;
+                renderWizard();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                renderWizard();
+            }
+        }
+
+        async function submitLevelUp() {
+            if (hpIncrease <= 0) {
+                alert("You must increase your HP!");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('character_id', characterId);
+            formData.append('level', newLevel);
+            formData.append('hp', currentCharacter.hp + hpIncrease);
+
+            // Append attributes
+            for (const [key, val] of Object.entries(abilities)) {
+                formData.append(key, val);
+            }
+
+            try {
+                const data = await apiFetch('/update-character', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (data && !data.error) {
+                    alert('Level Up Successful!');
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert(data.error || 'Failed to update character');
+                }
+            } catch (e) {
+                alert('Network error');
+            }
+        }
+
+        function setupEventListeners() {
+            // Any specific global listeners
+        }
     </script>
 </body>
 
