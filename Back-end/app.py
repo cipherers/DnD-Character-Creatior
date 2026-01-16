@@ -97,7 +97,13 @@ def require_proxy_secret():
 # --- Security: Enforce HTTPS ---
 @app.before_request
 def enforce_https():
-    if not app.debug and request.headers.get('X-Forwarded-Proto', 'http') == 'http':
+    # If in dev, don't bother with HTTPS redirects
+    if IS_DEV:
+        return None
+        
+    # ProxyFix handles the proto header, but we check explicitly for the redirect
+    # We only redirect if we are SURE it's http and NOT from a trusted proxy that already secured it.
+    if request.headers.get('X-Forwarded-Proto', 'https') == 'http':
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
 
@@ -414,6 +420,68 @@ def update_currency():
     
     db.session.commit()
     return jsonify({"message": "Currency updated"}), 200
+
+
+@app.route('/update-character', methods=['POST'])
+@limiter.limit("10 per minute")
+def update_character():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.form
+    char = Character.query.get_or_404(data.get('character_id'))
+    if char.user_id != session['user_id']:
+        return jsonify({"error": "Forbidden"}), 403
+    
+    # Update manual fields
+    if 'name' in data: char.name = data.get('name')
+    if 'age' in data: char.age = int(data.get('age'))
+    if 'level' in data: char.level = int(data.get('level'))
+    if 'alignment' in data: char.alignment = data.get('alignment')
+    
+    # Update skills
+    skill_ids = request.form.getlist('skills')
+    if skill_ids:
+        char.proficiencies = []
+        for sid in skill_ids:
+            s = Skill.query.get(sid)
+            if s: char.proficiencies.append(s)
+            
+    db.session.commit()
+    return jsonify({"message": "Character updated"}), 200
+
+
+@app.route('/upload-portrait', methods=['POST'])
+@limiter.limit("5 per minute")
+def upload_portrait():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    if 'portrait' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+        
+    file = request.files['portrait']
+    char_id = request.form.get('character_id')
+    
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+        
+    if file and allowed_file(file.filename):
+        char = Character.query.get_or_404(char_id)
+        if char.user_id != session['user_id']:
+            return jsonify({"error": "Forbidden"}), 403
+            
+        filename = secure_filename(f"char_{char.id}_{file.filename}")
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(save_path)
+        
+        # Save relative path for the DB
+        char.image_path = f"static/uploads/{filename}"
+        db.session.commit()
+        
+        return jsonify({"message": "Portrait uploaded", "path": char.image_path}), 200
+        
+    return jsonify({"error": "Invalid file type"}), 400
 
 
 @app.route('/add-dnd-info', methods=['POST'])

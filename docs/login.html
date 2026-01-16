@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="static/css/dnd-theme.css">
     <link rel="icon" href="data:,">
     <script src="static/js/config.js"></script>
+    <script src="static/js/api.js"></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 
@@ -69,16 +70,14 @@
                 messageContainer.innerHTML = '';
 
                 try {
-                    const response = await fetch(`${API_BASE_URL}/login`, {
+                    const data = await apiFetch('/login', {
                         method: 'POST',
-                        body: formData,
-                        credentials: 'include'
+                        body: formData
                     });
-                    const data = await response.json();
 
-                    if (response.ok) {
+                    if (data && !data.error) {
                         window.location.href = 'dashboard.html';
-                    } else {
+                    } else if (data) {
                         const alert = document.createElement('div');
                         alert.className = 'alert-dnd px-4 py-3 rounded relative mb-2 text-center text-sm shadow-sm';
                         alert.textContent = data.error || 'Login failed';
