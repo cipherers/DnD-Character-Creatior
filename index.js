@@ -108,13 +108,26 @@ function withCors(resp, request, allowedOrigin) {
   return new Response(resp.body, { status: resp.status, headers });
 }
 
-async function proxyToRender(request, renderOrigin) {
+async function proxyToRender(request, renderOrigin, env) {
   const url = new URL(request.url);
-  const target = new URL(renderOrigin + url.pathname + url.search);
+  const targetUrl = renderOrigin + url.pathname + url.search;
 
-  // Keep cookies/sessions intact
-  const newReq = new Request(target.toString(), request);
-  return fetch(newReq);
+  const headers = new Headers(request.headers);
+
+  if (env?.PROXY_SECRET) {
+    headers.set("X-Proxy-Secret", env.PROXY_SECRET);
+  }
+
+  headers.delete("host");
+
+  const init = {
+    method: request.method,
+    headers,
+    body: request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer(),
+    redirect: "manual",
+  };
+
+  return fetch(targetUrl, init);
 }
 
 function isCacheableGET(method, path) {
