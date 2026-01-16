@@ -35,7 +35,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 # --- Flask App / CORS ---
-app = Flask(__name__, template_folder='../docs', static_folder='../Front-end/static')
+app = Flask(__name__, template_folder='../Front-end', static_folder='../Front-end/static')
 app.url_map.strict_slashes = False
 
 IS_DEV = (
