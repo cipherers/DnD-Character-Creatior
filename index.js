@@ -43,7 +43,7 @@ export default {
       const cached = await cache.match(cacheKey);
       if (cached) return withCors(cached, request, ALLOWED_ORIGIN);
       // if not cached, fall through to fetch and store
-      const resp = await proxyToRender(request, RENDER_ORIGIN);
+      const resp = await proxyToRender(request, RENDER_ORIGIN, env);
       const respToCache = new Response(resp.body, resp);
 
       // Cache for 1 hour (tune if you want)
