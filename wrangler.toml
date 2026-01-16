@@ -5,3 +5,8 @@ compatibility_date = "2026-01-15"
 bindings = [
   { name = "RATE_LIMITER", class_name = "RateLimiter" }
 ]
+[[migrations]]
+tag = "v1"
+new_classes = ["RateLimiter"]
+
+PROXY_SECRET = "1JtFMDzhRdIpKcqfC9yriwUlHCQMCNzjND4fur50qIHOzz8hK0riz29WTaY1fUTuC9hfmcVZ8h8aBC6W98mDgndEf4fPUQw"
