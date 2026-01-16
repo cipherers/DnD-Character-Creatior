@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="static/css/dnd-theme.css">
     <link rel="icon" href="data:,">
     <script src="static/js/config.js"></script>
+    <script src="static/js/api.js"></script>
 </head>
 
 <body class="flex items-center justify-center min-h-screen p-4 pt-24">
@@ -188,20 +189,15 @@
             }
         }
 
-        async function apiFetch(endpoint, options = {}) {
-            options.credentials = 'include';
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
-            if (response.status === 401) {
-                window.location.href = 'login.html';
-                return null;
-            }
-            return response;
-        }
+        // Centralized apiFetch is now in static/js/api.js
 
         document.addEventListener('DOMContentLoaded', async function () {
-            const res = await apiFetch('/api/dashboard');
-            if (!res) return;
-            const data = await res.json();
+            const data = await apiFetch('/api/dashboard');
+            if (!data) return;
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
 
             document.getElementById('loading-state').classList.add('hidden');
 
@@ -217,12 +213,12 @@
             const ledgersList = document.getElementById('ledgers-list');
 
             const allFullChars = await Promise.all(data.characters.map(async c => {
-                const cRes = await apiFetch(`/api/get-character/${c.id}`);
-                return cRes.json();
+                return await apiFetch(`/api/get-character/${c.id}`);
             }));
 
             data.characters.forEach((char, index) => {
                 const fullChar = allFullChars[index];
+                if (!fullChar || fullChar.error) return;
 
                 // Roster Item
                 const li = document.createElement('li');
@@ -323,13 +319,17 @@
         async function deleteCharacter(id, name) {
             if (confirm(`Burn ${name}'s sheet?`)) {
                 const res = await apiFetch(`/api/delete-character/${id}`, { method: 'DELETE' });
-                if (res && res.ok) location.reload();
+                if (res && !res.error) location.reload();
+                else if (res) alert(res.error);
             }
         }
 
         async function openEditModal(id) {
-            const res = await apiFetch(`/api/get-character/${id}`);
-            const char = await res.json();
+            const char = await apiFetch(`/api/get-character/${id}`);
+            if (!char || char.error) {
+                if (char) alert(char.error);
+                return;
+            }
 
             document.getElementById('edit-character-id').value = char.id;
             document.getElementById('edit-character-level').value = char.level;

@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="static/css/dnd-theme.css">
     <link rel="icon" href="data:,">
     <script src="static/js/config.js"></script>
+    <script src="static/js/api.js"></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 
@@ -146,17 +147,12 @@
     </div>
 
     <script>
-        async function apiFetch(endpoint, options = {}) {
-            options.credentials = 'include';
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
-            return response;
-        }
+        // centralized apiFetch is in static/js/api.js
 
         document.addEventListener('DOMContentLoaded', async function () {
             // Check Auth
-            const authRes = await apiFetch('/api/check-auth');
-            const authData = await authRes.json();
-            if (!authData.logged_in) {
+            const authData = await apiFetch('/api/check-auth');
+            if (!authData || !authData.logged_in) {
                 window.location.href = 'login.html';
                 return;
             }
@@ -176,8 +172,11 @@
             const backgroundSelect = document.getElementById('background');
 
             async function populate(endpoint, el, placeholder) {
-                const res = await apiFetch(endpoint);
-                const data = await res.json();
+                const data = await apiFetch(endpoint);
+                if (!data || data.error) {
+                    el.innerHTML = `<option value="">-- Error loading ${placeholder} --</option>`;
+                    return;
+                }
                 el.innerHTML = `<option value="">${placeholder}</option>`;
                 data.forEach(item => {
                     const opt = document.createElement('option');
@@ -195,8 +194,8 @@
             classSelect.addEventListener('change', async function () {
                 const id = this.value;
                 if (!id) return;
-                const res = await apiFetch(`/get-class-details/${id}`);
-                const data = await res.json();
+                const data = await apiFetch(`/get-class-details/${id}`);
+                if (!data || data.error) return;
 
                 const skillsEl = document.getElementById('skills-container');
                 skillsEl.innerHTML = data.skills.length ? '' : '<p class="text-sm italic opacity-50">No skills available.</p>';
@@ -225,11 +224,10 @@
                 messageContainer.innerHTML = '';
 
                 try {
-                    const res = await apiFetch('/create-character', { method: 'POST', body: formData });
-                    const data = await res.json();
-                    if (res.ok) {
+                    const data = await apiFetch('/create-character', { method: 'POST', body: formData });
+                    if (data && !data.error) {
                         window.location.href = 'dashboard.html';
-                    } else {
+                    } else if (data) {
                         const alert = document.createElement('div');
                         alert.className = 'alert-dnd px-4 py-3 rounded relative mb-2 text-center shadow-md';
                         alert.textContent = data.error || 'Creation failed';

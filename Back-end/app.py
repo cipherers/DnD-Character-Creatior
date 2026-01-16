@@ -39,9 +39,9 @@ app = Flask(__name__, template_folder='../Front-end', static_folder='../Front-en
 app.url_map.strict_slashes = False
 
 IS_DEV = (
-    app.debug
-    or os.environ.get("ENV") == "dev"
+    os.environ.get("ENV") == "dev"
     or os.environ.get("FLASK_ENV") == "development"
+    or not os.environ.get("FRONTEND_ORIGIN") # Assume dev if this is missing
 )
 
 # IMPORTANT: In production, you should set FRONTEND_ORIGIN in Render:
@@ -49,12 +49,13 @@ IS_DEV = (
 FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN")
 if not FRONTEND_ORIGIN:
     if IS_DEV:
-        FRONTEND_ORIGIN = "*"  # Allow all in development
+        FRONTEND_ORIGIN = "http://localhost:5000"  # Default for local dev
     else:
-        # Fail closed instead of silently allowing the wrong origin
         raise RuntimeError("FRONTEND_ORIGIN environment variable must be set in production!")
 
-CORS(app, supports_credentials=True, origins=[FRONTEND_ORIGIN])
+CORS(app, supports_credentials=True, origins=[FRONTEND_ORIGIN], 
+     allow_headers=["Content-Type", "Authorization", "X-Proxy-Secret"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 
 # --- Proxy Support ---
@@ -107,6 +108,8 @@ def health_check():
 
 
 # --- Security: Rate Limiting ---
+# In production on Render, memory:// resets on restart and isn't shared.
+# For now, we continue with memory:// as requested, but noted the limitation.
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -131,10 +134,14 @@ if not SECRET_KEY:
 
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config.update(
-    SESSION_COOKIE_SECURE=True,     # only over HTTPS
     SESSION_COOKIE_HTTPONLY=True,   # not readable by JS
-    SESSION_COOKIE_SAMESITE="None", # for cross-site cookies
 )
+
+if not IS_DEV:
+    app.config.update(
+        SESSION_COOKIE_SECURE=True,     # only over HTTPS
+        SESSION_COOKIE_SAMESITE="None", # for cross-site cookies
+    )
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # 2MB max upload
@@ -180,6 +187,290 @@ def get_class_skill_map():
                     mapped_ids.append(skill_id)
             mapping[cls.name] = mapped_ids
     return mapping
+
+
+# --- API Routes ---
+
+@app.route('/login', methods=['POST'])
+@limiter.limit("10 per minute")
+def login():
+    username = request.form.get('username')
+    password = request.form.get('password')
+    
+    user = User.query.filter_by(username=username).first()
+    
+    # Simple auto-register if user doesn't exist (as per frontend hint)
+    if not user:
+        user = User(username=username)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+    
+    if user.check_password(password):
+        session['user_id'] = user.id
+        session.permanent = True
+        return jsonify({"message": "Logged in successfully", "user": username}), 200
+    
+    return jsonify({"error": "Invalid credentials"}), 401
+
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    return jsonify({"message": "Logged out successfully"}), 200
+
+
+@app.route('/api/check-auth')
+def check_auth():
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+        if user:
+            return jsonify({"logged_in": True, "user": user.username}), 200
+    return jsonify({"logged_in": False}), 200
+
+
+@app.route('/get-races')
+def get_races():
+    races = Race.query.all()
+    return jsonify([{"id": r.id, "name": r.name} for r in races])
+
+
+@app.route('/get-classes')
+def get_classes():
+    classes = Class.query.all()
+    return jsonify([{"id": c.id, "name": c.name} for c in classes])
+
+
+@app.route('/get-backgrounds')
+def get_backgrounds():
+    backgrounds = Background.query.all()
+    return jsonify([{"id": b.id, "name": b.name} for b in backgrounds])
+
+
+@app.route('/get-feats')
+def get_feats():
+    feats = Feat.query.all()
+    return jsonify([{"id": f.id, "name": f.name} for f in feats])
+
+
+@app.route('/get-spells')
+def get_spells():
+    spells = Spell.query.all()
+    return jsonify([{"id": s.id, "name": s.name} for s in spells])
+
+
+@app.route('/get-class-details/<int:class_id>')
+def get_class_details(class_id):
+    cls = Class.query.get_or_404(class_id)
+    # This is a bit simplified, usually you'd have a mapping table
+    # For now, we fetch all skills/equip just to populate the UI as seen in frontend
+    skills = Skill.query.all()
+    equipment = Equipment.query.all()
+    return jsonify({
+        "id": cls.id,
+        "name": cls.name,
+        "skills": [{"id": s.id, "name": s.name} for s in skills],
+        "equipment": [{"id": e.id, "name": e.name} for e in equipment]
+    })
+
+
+@app.route('/create-character', methods=['POST'])
+@limiter.limit("5 per minute")
+def create_character():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.form
+    user = User.query.get(session['user_id'])
+    
+    race = Race.query.get(data.get('race'))
+    char_class = Class.query.get(data.get('class'))
+    background = Background.query.get(data.get('background'))
+    
+    if not race or not char_class:
+        return jsonify({"error": "Invalid race or class"}), 400
+
+    # Basic char creation
+    new_char = Character(
+        name=data.get('name'),
+        age=int(data.get('age', 0)),
+        alignment=data.get('alignment'),
+        hp=10, # default/starting
+        strength=int(data.get('strength', 10)),
+        dexterity=int(data.get('dexterity', 10)),
+        constitution=int(data.get('constitution', 10)),
+        intelligence=int(data.get('intelligence', 10)),
+        wisdom=int(data.get('wisdom', 10)),
+        charisma=int(data.get('charisma', 10)),
+        race=race,
+        character_class=char_class,
+        level=int(data.get('level', 1)),
+        background=background,
+        user=user
+    )
+
+    if data.get('roll_scores') == 'true':
+        new_char.roll_ability_scores()
+
+    # Handle skills/equipment if provided (comma separated or multi-form)
+    skill_ids = request.form.getlist('skills')
+    for sid in skill_ids:
+        s = Skill.query.get(sid)
+        if s: new_char.proficiencies.append(s)
+        
+    equip_ids = request.form.getlist('equipment')
+    for eid in equip_ids:
+        e = Equipment.query.get(eid)
+        if e: new_char.inventory.append(e)
+
+    db.session.add(new_char)
+    db.session.commit()
+    
+    return jsonify({"message": "Character created", "id": new_char.id}), 201
+
+
+@app.route('/api/dashboard')
+def dashboard():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    user = User.query.get(session['user_id'])
+    chars = [{
+        "id": c.id,
+        "name": c.name,
+        "race": c.race.name,
+        "class": c.character_class.name,
+        "level": c.level,
+        "image_path": c.image_path
+    } for c in user.characters]
+    
+    return jsonify({"characters": chars})
+
+
+@app.route('/api/get-character/<int:char_id>')
+def get_character(char_id):
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    char = Character.query.get_or_404(char_id)
+    if char.user_id != session['user_id']:
+        return jsonify({"error": "Forbidden"}), 403
+    
+    return jsonify({
+        "id": char.id,
+        "name": char.name,
+        "age": char.age,
+        "level": char.level,
+        "alignment": char.alignment,
+        "race": char.race.name,
+        "class": char.character_class.name,
+        "background": char.background.name if char.background else "None",
+        "strength": char.strength,
+        "dexterity": char.dexterity,
+        "constitution": char.constitution,
+        "intelligence": char.intelligence,
+        "wisdom": char.wisdom,
+        "charisma": char.charisma,
+        "image_path": char.image_path,
+        "gold_pieces": char.gold_pieces,
+        "silver_pieces": char.silver_pieces,
+        "copper_pieces": char.copper_pieces,
+        "skills": [s.id for s in char.proficiencies],
+        "inventory": [{"id": i.id, "name": i.name} for i in char.inventory],
+        "available_skills": [{"id": s.id, "name": s.name} for s in Skill.query.all()]
+    })
+
+
+@app.route('/api/delete-character/<int:char_id>', methods=['DELETE'])
+def delete_character(char_id):
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    char = Character.query.get_or_404(char_id)
+    if char.user_id != session['user_id']:
+        return jsonify({"error": "Forbidden"}), 403
+    
+    db.session.delete(char)
+    db.session.commit()
+    return jsonify({"message": "Character deleted"}), 200
+
+
+@app.route('/update-character-currency', methods=['POST'])
+def update_currency():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.get_json()
+    char = Character.query.get_or_404(data.get('character_id'))
+    if char.user_id != session['user_id']:
+        return jsonify({"error": "Forbidden"}), 403
+    
+    ctype = data.get('currency_type')
+    val = data.get('value', 0)
+    
+    if ctype == 'gold_pieces': char.gold_pieces = val
+    elif ctype == 'silver_pieces': char.silver_pieces = val
+    elif ctype == 'copper_pieces': char.copper_pieces = val
+    
+    db.session.commit()
+    return jsonify({"message": "Currency updated"}), 200
+
+
+@app.route('/add-dnd-info', methods=['POST'])
+@limiter.limit("5 per minute")
+def add_dnd_info():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.form
+    itype = data.get('type')
+    name = data.get('name')
+    desc = data.get('description')
+
+    if itype == 'race':
+        new_item = Race(
+            name=name, description=desc,
+            strength_bonus=int(data.get('strength_bonus', 0)),
+            dexterity_bonus=int(data.get('dexterity_bonus', 0)),
+            constitution_bonus=int(data.get('constitution_bonus', 0)),
+            intelligence_bonus=int(data.get('intelligence_bonus', 0)),
+            wisdom_bonus=int(data.get('wisdom_bonus', 0)),
+            charisma_bonus=int(data.get('charisma_bonus', 0))
+        )
+    elif itype == 'class':
+        new_item = Class(name=name, description=desc, hit_die=int(data.get('hit_die', 8)))
+    elif itype == 'background':
+        new_item = Background(name=name, description=desc)
+    elif itype == 'ability':
+        new_item = Skill(name=name, description=desc, associated_attribute=data.get('associated_attribute'))
+    elif itype == 'equipment':
+        new_item = Equipment(
+            name=name, description=desc, item_type=data.get('item_type'),
+            damage_dice=data.get('damage_dice'), damage_type=data.get('damage_type'),
+            ac=int(data.get('ac', 0)) if data.get('ac') else None
+        )
+    else:
+        return jsonify({"error": "Invalid type"}), 400
+
+    db.session.add(new_item)
+    db.session.commit()
+    return jsonify({"message": f"Added {name} to {itype}"}), 201
+
+
+@app.route('/download-character-pdf/<int:char_id>')
+def download_character_pdf(char_id):
+    char = Character.query.get_or_404(char_id)
+    # Basic PDF generation logic
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    p.drawString(100, 750, f"Character Sheet: {char.name}")
+    p.drawString(100, 730, f"Race: {char.race.name} | Class: {char.character_class.name} | Level: {char.level}")
+    p.drawString(100, 710, f"STR: {char.strength} | DEX: {char.dexterity} | CON: {char.constitution}")
+    p.drawString(100, 690, f"INT: {char.intelligence} | WIS: {char.wisdom} | CHA: {char.charisma}")
+    p.showPage()
+    p.save()
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name=f"{char.name}.pdf", mimetype='application/pdf')
 
 
 @app.route('/get-all-equipment')
@@ -412,3 +703,9 @@ def seed_database():
             db.session.commit()
 
         print("Database seeding check complete.")
+
+
+if __name__ == "__main__":
+    seed_database()
+    # In development, we run on port 5000 as requested.
+    app.run(host="0.0.0.0", port=5000, debug=True)
