@@ -2,10 +2,9 @@ name = "dndcharactercreatior"
 main = "index.js"
 compatibility_date = "2026-01-15"
 
-[durable_objects]
-bindings = [
-  { name = "RATE_LIMITER", class_name = "RateLimiter" }
-]
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiter"
 
 [[migrations]]
 tag = "v1"
