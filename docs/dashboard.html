@@ -357,7 +357,95 @@
             toggleModal('edit-character-modal', true);
         }
 
-        // ... more functions for inventory, portrait upload, etc.
+        /* Inventory Functions */
+        let allEquipment = [];
+
+        async function openAddItemModal(charId) {
+            document.getElementById('add-item-char-id').value = charId;
+            const container = document.getElementById('item-list-container');
+            container.innerHTML = '<div class="text-center italic opacity-60">Scouring the armory...</div>';
+            toggleModal('add-item-modal', true);
+
+            // Fetch equipment if not cached
+            if (allEquipment.length === 0) {
+                const data = await apiFetch('/get-all-equipment');
+                if (data && !data.error) {
+                    allEquipment = data;
+                } else {
+                    container.innerHTML = '<div class="text-red-500 text-center">Failed to load equipment</div>';
+                    return;
+                }
+            }
+
+            renderItemList(allEquipment);
+        }
+
+        function renderItemList(items) {
+            const container = document.getElementById('item-list-container');
+            container.innerHTML = '';
+
+            if (items.length === 0) {
+                container.innerHTML = '<div class="text-center italic opacity-60">No items found matching criteria.</div>';
+                return;
+            }
+
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-2 hover:bg-[#eaddcf] cursor-pointer border-b border-[#5c4033] border-opacity-10';
+                div.onclick = () => addItem(item.id);
+                div.innerHTML = `
+                    <div>
+                        <div class="font-bold text-[#8b0000]">${item.name}</div>
+                        <div class="text-xs text-[#5c4033]">${item.item_type}</div>
+                    </div>
+                    <div class="text-xs text-gray-500 italic max-w-xs truncate">${item.description}</div>
+                    <button class="btn-dnd btn-secondary-dnd text-xs py-1 px-2 pointer-events-none">Add</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Filter functionality
+        document.getElementById('item-search').addEventListener('keyup', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = allEquipment.filter(i =>
+                i.name.toLowerCase().includes(term) ||
+                i.item_type.toLowerCase().includes(term) ||
+                (i.description && i.description.toLowerCase().includes(term))
+            );
+            renderItemList(filtered);
+        });
+
+        async function addItem(itemId) {
+            const charId = document.getElementById('add-item-char-id').value;
+            const res = await apiFetch('/add-inventory-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ character_id: charId, item_id: itemId })
+            });
+
+            if (res && !res.error) {
+                location.reload(); // Simple reload to reflect changes
+            } else {
+                alert(res ? res.error : 'Failed to add item');
+            }
+        }
+
+        async function removeItem(charId, itemId) {
+            if (!confirm("Discard this item?")) return;
+
+            const res = await apiFetch('/remove-inventory-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ character_id: charId, item_id: itemId })
+            });
+
+            if (res && !res.error) {
+                location.reload();
+            } else {
+                alert(res ? res.error : 'Failed to remove item');
+            }
+        }
     </script>
 </body>
 
