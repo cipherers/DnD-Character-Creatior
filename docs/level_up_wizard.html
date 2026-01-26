@@ -83,7 +83,9 @@
         // State for upgrades
         let newLevel = 0;
         let hpIncrease = 0;
-        let abilityPoints = 2; // Standard ASI logic
+        let hasASI = false;
+        const asiLevels = [4, 8, 12, 16, 19];
+        let abilityPoints = 0;
         let abilities = {
             strength: 0, dexterity: 0, constitution: 0,
             intelligence: 0, wisdom: 0, charisma: 0
@@ -107,6 +109,10 @@
 
                 currentCharacter = data;
                 newLevel = currentCharacter.level + 1;
+
+                // Check for ASI
+                hasASI = asiLevels.includes(newLevel);
+                abilityPoints = hasASI ? 2 : 0;
 
                 // Initialize base stats (API returns stats directly on object)
                 abilities.strength = currentCharacter.strength;
@@ -183,29 +189,43 @@
                 `;
             } else if (currentStep === 2) {
                 // Step 2: Ability Scores
-                form.innerHTML = `
-                    <div class="space-y-4">
-                        <h2 class="text-2xl font-serif font-bold text-center text-[#8b0000]">Refine Attributes</h2>
-                        <p class="text-center text-sm">You have <span id="points-remaining" class="font-bold text-xl text-[#8b0000]">${abilityPoints}</span> points to distribute.</p>
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
-                            ${Object.keys(abilities).map(key => `
-                                <div class="flex justify-between items-center bg-[rgba(92,64,51,0.05)] p-3 rounded border border-[#5c4033]/20">
-                                    <span class="capitalize font-bold w-24">${key}</span>
-                                    <div class="flex items-center gap-3">
-                                        <button type="button" onclick="adjustAbility('${key}', -1)" class="w-8 h-8 rounded-full bg-[#5c4033] text-[#f4e4bc] font-bold hover:bg-[#8b0000]">-</button>
-                                        <span id="val-${key}" class="w-8 text-center font-bold text-lg">${abilities[key]}</span>
-                                        <button type="button" onclick="adjustAbility('${key}', 1)" class="w-8 h-8 rounded-full bg-[#5c4033] text-[#f4e4bc] font-bold hover:bg-[#8b0000]">+</button>
-                                    </div>
-                                </div>
-                            `).join('')}
+                if (!hasASI) {
+                    form.innerHTML = `
+                        <div class="text-center space-y-6">
+                            <h2 class="text-2xl font-serif font-bold text-[#8b0000]">Refine Attributes</h2>
+                            <p class="text-lg">Ability Score Improvements are available at levels 4, 8, 12, 16, and 19.</p>
+                            <p class="italic text-[#5c4033] opacity-80">No attribute changes available for Level ${newLevel}.</p>
                         </div>
-                    </div>
-                    <div class="mt-auto pt-8 flex justify-between">
-                        <button type="button" onclick="prevStep()" class="btn-dnd btn-secondary-dnd">Back</button>
-                        <button type="button" onclick="submitLevelUp()" class="btn-dnd btn-primary-dnd">Confirm Level Up</button>
-                    </div>
-                `;
+                        <div class="mt-auto pt-8 flex justify-between">
+                            <button type="button" onclick="prevStep()" class="btn-dnd btn-secondary-dnd">Back</button>
+                            <button type="button" onclick="submitLevelUp()" class="btn-dnd btn-primary-dnd">Confirm Level Up</button>
+                        </div>
+                    `;
+                } else {
+                    form.innerHTML = `
+                        <div class="space-y-4">
+                            <h2 class="text-2xl font-serif font-bold text-center text-[#8b0000]">Refine Attributes</h2>
+                            <p class="text-center text-sm">You have <span id="points-remaining" class="font-bold text-xl text-[#8b0000]">${abilityPoints}</span> points to distribute.</p>
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+                                ${Object.keys(abilities).map(key => `
+                                    <div class="flex justify-between items-center bg-[rgba(92,64,51,0.05)] p-3 rounded border border-[#5c4033]/20">
+                                        <span class="capitalize font-bold w-24">${key}</span>
+                                        <div class="flex items-center gap-3">
+                                            <button type="button" onclick="adjustAbility('${key}', -1)" class="w-8 h-8 rounded-full bg-[#5c4033] text-[#f4e4bc] font-bold hover:bg-[#8b0000]">-</button>
+                                            <span id="val-${key}" class="w-8 text-center font-bold text-lg">${abilities[key]}</span>
+                                            <button type="button" onclick="adjustAbility('${key}', 1)" class="w-8 h-8 rounded-full bg-[#5c4033] text-[#f4e4bc] font-bold hover:bg-[#8b0000]">+</button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="mt-auto pt-8 flex justify-between">
+                            <button type="button" onclick="prevStep()" class="btn-dnd btn-secondary-dnd">Back</button>
+                            <button type="button" onclick="submitLevelUp()" class="btn-dnd btn-primary-dnd">Confirm Level Up</button>
+                        </div>
+                    `;
+                }
             }
         }
 
