@@ -54,7 +54,7 @@ export default {
     }
 
     // --- Normal proxy (no caching) ---
-    const resp = await proxyToRender(request, RENDER_ORIGIN);
+    const resp = await proxyToRender(request, RENDER_ORIGIN, env);
     return withCors(resp, request, ALLOWED_ORIGIN);
   },
 };
