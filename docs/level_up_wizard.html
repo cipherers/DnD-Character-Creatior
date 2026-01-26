@@ -104,13 +104,13 @@
                 currentCharacter = data;
                 newLevel = currentCharacter.level + 1;
 
-                // Initialize base stats
-                abilities.strength = currentCharacter.stats.strength;
-                abilities.dexterity = currentCharacter.stats.dexterity;
-                abilities.constitution = currentCharacter.stats.constitution;
-                abilities.intelligence = currentCharacter.stats.intelligence;
-                abilities.wisdom = currentCharacter.stats.wisdom;
-                abilities.charisma = currentCharacter.stats.charisma;
+                // Initialize base stats (API returns stats directly on object)
+                abilities.strength = currentCharacter.strength;
+                abilities.dexterity = currentCharacter.dexterity;
+                abilities.constitution = currentCharacter.constitution;
+                abilities.intelligence = currentCharacter.intelligence;
+                abilities.wisdom = currentCharacter.wisdom;
+                abilities.charisma = currentCharacter.charisma;
 
                 renderWizard();
             } catch (err) {
@@ -232,7 +232,7 @@
         function adjustAbility(stat, delta) {
             // Simple validation: can't go below original, max 20, points limited
             const currentVal = abilities[stat];
-            const originalVal = currentCharacter.stats[stat];
+            const originalVal = currentCharacter[stat];
 
             if (delta > 0) {
                 if (abilityPoints > 0 && currentVal < 20) {
