@@ -367,6 +367,7 @@ def get_character(char_id):
         "name": char.name,
         "age": char.age,
         "level": char.level,
+        "hp": char.hp,
         "alignment": char.alignment,
         "race": char.race.name,
         "class": char.character_class.name,
