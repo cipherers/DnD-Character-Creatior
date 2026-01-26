@@ -317,6 +317,14 @@ def create_character():
 
     if data.get('roll_scores') == 'true':
         new_char.roll_ability_scores()
+    else:
+        # If manually entering scores (Point Buy / Standard Array), we must add racial bonuses
+        new_char.strength += race.strength_bonus
+        new_char.dexterity += race.dexterity_bonus
+        new_char.constitution += race.constitution_bonus
+        new_char.intelligence += race.intelligence_bonus
+        new_char.wisdom += race.wisdom_bonus
+        new_char.charisma += race.charisma_bonus
 
     # Handle skills/equipment if provided (comma separated or multi-form)
     skill_ids = request.form.getlist('skills')
