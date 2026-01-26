@@ -429,36 +429,61 @@ def update_character():
     if 'user_id' not in session:
         return jsonify({"error": "Unauthorized"}), 401
     
-    data = request.form
-    char = Character.query.get_or_404(data.get('character_id'))
-    if char.user_id != session['user_id']:
-        return jsonify({"error": "Forbidden"}), 403
-    
-    # Update manual fields
-    if 'name' in data: char.name = data.get('name')
-    if 'age' in data: char.age = int(data.get('age'))
-    if 'level' in data: char.level = int(data.get('level'))
-    if 'alignment' in data: char.alignment = data.get('alignment')
-    if 'hp' in data: char.hp = int(data.get('hp'))
+    try:
+        data = request.form
+        
+        # Validate character_id
+        char_id = data.get('character_id')
+        if not char_id:
+            return jsonify({"error": "Missing character_id"}), 400
+        
+        char = Character.query.get_or_404(int(char_id))
+        if char.user_id != session['user_id']:
+            return jsonify({"error": "Forbidden"}), 403
+        
+        # Update manual fields - only if present and non-empty
+        if data.get('name'): 
+            char.name = data.get('name')
+        if data.get('age'): 
+            char.age = int(data.get('age'))
+        if data.get('level'): 
+            char.level = int(data.get('level'))
+        if data.get('alignment'): 
+            char.alignment = data.get('alignment')
+        if data.get('hp'): 
+            char.hp = int(data.get('hp'))
 
-    # Update Ability Scores
-    if 'strength' in data: char.strength = int(data.get('strength'))
-    if 'dexterity' in data: char.dexterity = int(data.get('dexterity'))
-    if 'constitution' in data: char.constitution = int(data.get('constitution'))
-    if 'intelligence' in data: char.intelligence = int(data.get('intelligence'))
-    if 'wisdom' in data: char.wisdom = int(data.get('wisdom'))
-    if 'charisma' in data: char.charisma = int(data.get('charisma'))
+        # Update Ability Scores - only if present and valid
+        if data.get('strength'): 
+            char.strength = int(data.get('strength'))
+        if data.get('dexterity'): 
+            char.dexterity = int(data.get('dexterity'))
+        if data.get('constitution'): 
+            char.constitution = int(data.get('constitution'))
+        if data.get('intelligence'): 
+            char.intelligence = int(data.get('intelligence'))
+        if data.get('wisdom'): 
+            char.wisdom = int(data.get('wisdom'))
+        if data.get('charisma'): 
+            char.charisma = int(data.get('charisma'))
+        
+        # Update skills
+        skill_ids = request.form.getlist('skills')
+        if skill_ids:
+            char.proficiencies = []
+            for sid in skill_ids:
+                s = Skill.query.get(sid)
+                if s: char.proficiencies.append(s)
+                
+        db.session.commit()
+        return jsonify({"message": "Character updated"}), 200
     
-    # Update skills
-    skill_ids = request.form.getlist('skills')
-    if skill_ids:
-        char.proficiencies = []
-        for sid in skill_ids:
-            s = Skill.query.get(sid)
-            if s: char.proficiencies.append(s)
-            
-    db.session.commit()
-    return jsonify({"message": "Character updated"}), 200
+    except ValueError as e:
+        return jsonify({"error": f"Invalid value: {str(e)}"}), 400
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating character: {e}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 
 @app.route('/upload-portrait', methods=['POST'])
