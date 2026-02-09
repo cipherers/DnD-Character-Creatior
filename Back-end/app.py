@@ -197,6 +197,26 @@ def get_class_skill_map():
 
 # --- API Routes ---
 
+@app.route('/register', methods=['POST'])
+@limiter.limit("10 per minute")
+def register():
+    username = request.form.get('username')
+    password = request.form.get('password')
+    
+    if not username or not password:
+        return jsonify({"error": "Username and password required"}), 400
+    
+    if User.query.filter_by(username=username).first():
+        return jsonify({"error": "Username already exists"}), 400
+    
+    new_user = User(username=username)
+    new_user.set_password(password)
+    db.session.add(new_user)
+    db.session.commit()
+    
+    return jsonify({"message": "Account created successfully"}), 201
+
+
 @app.route('/login', methods=['POST'])
 @limiter.limit("10 per minute")
 def login():
@@ -205,14 +225,7 @@ def login():
     
     user = User.query.filter_by(username=username).first()
     
-    # Simple auto-register if user doesn't exist (as per frontend hint)
-    if not user:
-        user = User(username=username)
-        user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
-    
-    if user.check_password(password):
+    if user and user.check_password(password):
         session['user_id'] = user.id
         session.permanent = True
         return jsonify({"message": "Logged in successfully", "user": username}), 200
