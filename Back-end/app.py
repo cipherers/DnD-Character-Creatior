@@ -19,7 +19,10 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import requests
+from itsdangerous import URLSafeTimedSerializer
 
 # Make sure all your model definitions are in a file named 'models.py'
 from models import db, Character, Race, Class, Background, Skill, Equipment, User, Spell, Feat, Trait
@@ -108,6 +111,35 @@ def enforce_https():
         return redirect(url, code=301)
 
 
+        return redirect(url, code=301)
+
+
+@app.before_request
+def check_auth_token():
+    """
+    Check for X-Auth-Token header and set session['user_id'] if valid.
+    This allows mobile devices (where cookies might be blocked) to authenticate.
+    """
+    # If already in session (cookie worked), no need to check token
+    if 'user_id' in session:
+        return
+
+    token = request.headers.get('X-Auth-Token')
+    if token:
+        try:
+            # Max age 14 days (1209600 seconds)
+            data = serializer.loads(token, salt='auth-token', max_age=1209600)
+            user_id = data.get('user_id')
+            if user_id:
+                # We temporarily set it in session for this request context
+                # Note: This doesn't persist the session cookie back to the client
+                # if the client is blocking cookies, but it makes current request work.
+                session['user_id'] = user_id
+        except Exception:
+            # Invalid or expired token
+            pass
+
+
 @app.route('/health')
 def health_check():
     return jsonify({'status': 'healthy', 'message': 'DnD Character Creator API is up and running'}), 200
@@ -151,6 +183,12 @@ if not IS_DEV:
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # 2MB max upload
+
+# --- Token Auth Serializer ---
+# We use the same secret key. Salt separates this usage from others.
+serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
@@ -219,7 +257,10 @@ def register():
     db.session.add(new_user)
     db.session.commit()
     
-    return jsonify({"message": "Account created successfully"}), 201
+    # Generate Token
+    token = serializer.dumps({'user_id': new_user.id}, salt='auth-token')
+    
+    return jsonify({"message": "Account created successfully", "token": token}), 201
 
 
 @app.route('/login', methods=['POST'])
@@ -238,7 +279,11 @@ def login():
     if user and user.check_password(password):
         session['user_id'] = user.id
         session.permanent = True
-        return jsonify({"message": "Logged in successfully", "user": username}), 200
+        
+        # Generate Token
+        token = serializer.dumps({'user_id': user.id}, salt='auth-token')
+        
+        return jsonify({"message": "Logged in successfully", "user": username, "token": token}), 200
     
     print(f"Login failed for user: '{username}'. User found: {bool(user)}")
     return jsonify({"error": "Invalid credentials"}), 401

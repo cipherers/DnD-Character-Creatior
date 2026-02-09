@@ -145,6 +145,7 @@
                     });
 
                     if (data && !data.error) {
+                        if (data.token) localStorage.setItem('dnd_auth_token', data.token);
                         window.location.href = 'dashboard.html';
                     } else if (data) {
                         showMessage(data.error || 'Login failed');
@@ -176,6 +177,7 @@
                     });
 
                     if (data && !data.error) {
+                        if (data.token) localStorage.setItem('dnd_auth_token', data.token);
                         showMessage('Account created! Please log in.', 'success');
                         registerForm.reset();
                         setTimeout(() => {

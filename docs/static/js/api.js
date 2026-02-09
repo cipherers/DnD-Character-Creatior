@@ -6,6 +6,13 @@
 async function apiFetch(endpoint, options = {}) {
     options.credentials = 'include';
 
+    // Add Token Auth for mobile/ITP support
+    const token = localStorage.getItem('dnd_auth_token');
+    if (token) {
+        options.headers = options.headers || {};
+        options.headers['X-Auth-Token'] = token;
+    }
+
     // Ensure absolute URL if not already
     const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
 
