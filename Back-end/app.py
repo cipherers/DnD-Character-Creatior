@@ -205,6 +205,11 @@ def register():
     
     if not username or not password:
         return jsonify({"error": "Username and password required"}), 400
+        
+    # Sanitize
+    username = username.strip()
+    # Optional: enforce lowercase for consistency
+    # username = username.lower() 
     
     if User.query.filter_by(username=username).first():
         return jsonify({"error": "Username already exists"}), 400
@@ -223,6 +228,11 @@ def login():
     username = request.form.get('username')
     password = request.form.get('password')
     
+    if not username or not password:
+         return jsonify({"error": "Missing credentials"}), 400
+
+    username = username.strip()
+    
     user = User.query.filter_by(username=username).first()
     
     if user and user.check_password(password):
@@ -230,6 +240,7 @@ def login():
         session.permanent = True
         return jsonify({"message": "Logged in successfully", "user": username}), 200
     
+    print(f"Login failed for user: '{username}'. User found: {bool(user)}")
     return jsonify({"error": "Invalid credentials"}), 401
 
 
